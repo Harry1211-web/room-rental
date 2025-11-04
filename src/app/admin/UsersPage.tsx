@@ -134,7 +134,7 @@ export default function UsersPage() {
                   <p><strong>Created:</strong> {new Date(row.created_at).toLocaleString()}</p>
                 </div>
               }>
-                <button className="text-blue-600 hover:underline font-medium">
+                <button className="text-blue-600 hover:underline font-medium" onClick={() => router.push(`/pages/user/${row.id}`)}>
                   {row.name ?? "—"}
                 </button>
               </HoverCard>

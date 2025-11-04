@@ -13,6 +13,18 @@ export default function AuthPage() {
   const modeParam = searchParams.get("mode");
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
 
+  // Dark mode state
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Detect system dark mode preference
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setIsDarkMode(prefersDark);
+    
+    // Optionally, you can persist this setting
+    // localStorage.setItem("theme", prefersDark ? "dark" : "light");
+  }, []);
+
   useEffect(() => {
     if (modeParam === "register" || modeParam === "forgot" || modeParam === "login") {
       setMode(modeParam);
@@ -24,8 +36,12 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-6">
-      <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md relative overflow-hidden">
+    <div
+      className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-6 dark:bg-gray-900 dark:from-gray-800 dark:to-gray-900`}
+    >
+      <div
+        className={`bg-white shadow-lg rounded-2xl p-8 w-full max-w-md relative overflow-hidden dark:bg-gray-800`}
+      >
         <AnimatePresence mode="wait">
           <motion.h1
             key={mode}
@@ -39,7 +55,7 @@ export default function AuthPage() {
                 : mode === "register"
                 ? "text-green-600"
                 : "text-yellow-600"
-            }`}
+            } dark:text-white`}
           >
             {mode === "login"
               ? "🔐 Login"

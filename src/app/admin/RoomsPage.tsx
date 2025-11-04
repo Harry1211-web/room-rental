@@ -27,6 +27,7 @@ interface Room {
   status: string;
   landlordName: string;
   landlordEmail?: string;
+  landlord_id: string; // Add landlord_id here
   tags: string[];
   total_confirm_booking: number;
 }
@@ -63,6 +64,8 @@ export default function RoomsPage() {
         const userObj = Array.isArray(r.users) ? r.users[0] ?? null : r.users;
         const landlordName = userObj?.name ?? "—";
         const landlordEmail = userObj?.email;
+        const landlordId = r.landlord_id ?? ""; // Make sure to capture landlord_id here
+
 
         return {
           id: r.id,
@@ -70,6 +73,7 @@ export default function RoomsPage() {
           status: r.status ?? "available",
           landlordName,
           landlordEmail,
+          landlord_id: landlordId, // Assign landlord_id to the Room object
           tags:
             r.rooms_tags?.flatMap((rt: any) => {
               if (!rt?.tags) return [];
@@ -228,7 +232,7 @@ export default function RoomsPage() {
                 >
                   <button
                     className="text-blue-600 hover:underline"
-                    onClick={() => router.push(`/pages/user/${row.id}`)}
+                    onClick={() => router.push(`/pages/user/${row.landlord_id}`)}
                   >
                     {row.landlordName}
                   </button>

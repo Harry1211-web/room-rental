@@ -52,7 +52,7 @@ export default function LoginForm({
         .from("users")
         .select("role, avatar_url")
         .eq("id", user.id)
-        .single()
+        .single();
       if (userError) {
         console.error(
           "Error fetching user role:",
@@ -64,7 +64,7 @@ export default function LoginForm({
         setFieldErrors({ general: "Failed to load user information." });
         return;
       }
-      console.log(userData.role)
+      console.log(userData.role);
       // 🔹 3. Lưu session đăng nhập
       localStorage.setItem("isLogin", "true");
 
@@ -91,7 +91,7 @@ export default function LoginForm({
       <input
         type="email"
         placeholder="Email"
-        className="w-full border p-2 rounded"
+        className="w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
@@ -102,7 +102,7 @@ export default function LoginForm({
       <input
         type="password"
         placeholder="Password"
-        className="w-full border p-2 rounded"
+        className="w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
@@ -117,7 +117,7 @@ export default function LoginForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-blue-600 text-white py-2 rounded"
+        className="w-full bg-blue-600 text-white py-2 rounded dark:bg-blue-500 dark:hover:bg-blue-600 hover:bg-blue-700 transition-colors"
       >
         {loading ? "Processing..." : "Login"}
       </button>
@@ -126,14 +126,14 @@ export default function LoginForm({
         <button
           type="button"
           onClick={() => setMode("forgot")}
-          className="text-blue-600 hover:underline"
+          className="text-blue-600 hover:underline dark:text-blue-400"
         >
           Forgot password?
         </button>
         <button
           type="button"
           onClick={() => setMode("register")}
-          className="text-green-600 hover:underline"
+          className="text-green-600 hover:underline dark:text-green-400"
         >
           Register
         </button>

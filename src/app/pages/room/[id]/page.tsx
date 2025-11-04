@@ -41,7 +41,8 @@ interface ReviewWithUser {
 
 // ==================== COMPONENT ====================
 export default function RoomDetailPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+
   const { idUser } = useUser();
 
   const [room, setRoom] = useState<Room | null>(null);
@@ -242,7 +243,13 @@ export default function RoomDetailPage() {
       </div>
 
       {/* Booking & Report buttons */}
-      <div className="border-t pt-4 flex flex-col gap-4">
+      <div className="border-t pt-4 flex flex-col gap-4 relative">
+        <div
+          className={`absolute top-[-25px] left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md ${idUser ? 'hidden' : 'block'}`}
+          style={{ display: idUser ? 'none' : 'block' }}
+        >
+          Please login to book or report
+        </div>
         <Button
           disabled={!idUser}
           className={`mt-3 ${idUser ? "bg-green-600 hover:bg-green-700" : "bg-gray-300 cursor-not-allowed"} text-white px-6 py-2 rounded-lg`}

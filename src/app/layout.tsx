@@ -24,7 +24,7 @@ export default function RootLayout({
           <UserProvider>
             <Navbar />
             <main className="min-h-screen">{children}</main>
-            <Toaster position="top-right" richColors />
+            <Toaster position="bottom-right" richColors  />
           </UserProvider>
         </Providers>
       </body>
