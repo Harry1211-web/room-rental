@@ -333,7 +333,13 @@ export default function RecommendPage() {
             Advanced Search
           </button>
           
-          {/* need better UI design fr fr ASAP no cap man */}
+          {
+          /*
+            cần chỉnh room card để hiện tag lên, với room/[id] đồ cũng phải có tag luôn
+            chứ duma filter xong ko bt nó có tag ko ỉa vcl
+            also we need better UI design fr fr ASAP no cap man 
+          */
+          }
           {/* Suggestions */}
           {(showSyntaxHelp || suggestions.length > 0) && (
             <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 mt-1 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
