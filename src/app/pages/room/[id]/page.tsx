@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/app/context/Usercontext";
 import { format } from "date-fns";
 import ReportModal from "@/components/ReportModel";
+import { toast } from "sonner";
 
 // ==================== TYPES ====================
 interface Room {
@@ -42,7 +43,7 @@ interface ReviewWithUser {
 // ==================== COMPONENT ====================
 export default function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
-
+  const router = useRouter();
   const { idUser } = useUser();
 
   const [room, setRoom] = useState<Room | null>(null);
@@ -54,10 +55,10 @@ export default function RoomDetailPage() {
   const [sortOrder, setSortOrder] = useState("newest");
   const [page, setPage] = useState(1);
   const reviewsPerPage = 5;
+  const [booked, setBooked] = useState<boolean>(false);
 
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [booked, setBooked] = useState(false);
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -77,6 +78,16 @@ export default function RoomDetailPage() {
       setLoading(true);
 
       try {
+        if (idUser) {
+          const { count } = await supabase
+            .from("bookings")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", idUser)
+            .eq("room_id", id);
+
+          setBooked((count ?? 0) > 0);
+          console.log(booked)
+        }
         // Fetch room info
         const { data: roomData } = await supabase
           .from("rooms")
@@ -147,9 +158,13 @@ export default function RoomDetailPage() {
   const sortedReviews = [...filteredReviews].sort((a, b) => {
     switch (sortOrder) {
       case "newest":
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       case "oldest":
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        return (
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
       case "high":
         return b.rating - a.rating;
       case "low":
@@ -168,8 +183,18 @@ export default function RoomDetailPage() {
 
   // ==================== SUBMIT REVIEW ====================
   const handleSubmitReview = async () => {
-    if (!idUser) return alert("⚠️ You must log in to write a review!");
-    if (!rating || !comment.trim()) return alert("Fill in rating & comment!");
+    if (!booked) {
+      toast.error(
+        "You need to book this room successfully at least once to rate"
+      );
+      setComment("");
+      return;
+    }
+
+        if (!rating || !comment.trim()) {
+      toast.error("Please enter full rating and comment.");
+      return;
+    }
 
     setSubmittingReview(true);
     const { error } = await supabase.from("reviews").insert({
@@ -180,11 +205,32 @@ export default function RoomDetailPage() {
     });
     setSubmittingReview(false);
 
-    if (error) alert("Error submitting review!");
-    else {
-      alert("✅ Review submitted!");
+    if (error) {
+      toast.error("An error occurred. Please try again later.");
+    } else {
+      toast.success("Thank you for sharing your thoughts about this room.");
+
       setComment("");
       setRating(5);
+
+      // Refresh lại danh sách review
+      const { data: newReviews } = await supabase
+        .from("reviews")
+        .select(
+          `
+        id,
+        room_id,
+        reviewer_id,
+        rating,
+        comment,
+        created_at,
+        users(name, avatar_url)
+      `
+        )
+        .eq("room_id", id)
+        .order("created_at", { ascending: false });
+
+      setReviews(newReviews ?? []);
     }
   };
 
@@ -220,47 +266,75 @@ export default function RoomDetailPage() {
 
       {/* Images */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        {(images.length ? images : ["/room-img-default.jpg"]).map((url, idx) => (
-          <div key={idx} className="relative w-full h-60 rounded-lg overflow-hidden">
-            <Image
-              src={url}
-              alt="Room image"
-              fill
-              className="object-cover"
-              priority
-            />
-          </div>
-        ))}
+        {(images.length ? images : ["/room-img-default.jpg"]).map(
+          (url, idx) => (
+            <div
+              key={idx}
+              className="relative w-full h-60 rounded-lg overflow-hidden"
+            >
+              <Image
+                src={url}
+                alt="Room image"
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+          )
+        )}
       </div>
 
       {/* Room info */}
       <div className="text-lg space-y-2">
-        <p><span className="font-semibold">📍 Address:</span> {room.address}</p>
-        <p><span className="font-semibold">📏 Area:</span> {room.area} m²</p>
-        <p><span className="font-semibold">📅 Total bookings:</span> {room.total_confirmation_booking ?? 0}</p>
-        <p><span className="font-semibold">💰 Price:</span> {room.price.toLocaleString()} ₫ / night</p>
+        <p>
+          <span className="font-semibold">📍 Address:</span> {room.address}
+        </p>
+        <p>
+          <span className="font-semibold">📏 Area:</span> {room.area} m²
+        </p>
+        <p>
+          <span className="font-semibold">📅 Total bookings:</span>{" "}
+          {room.total_confirmation_booking ?? 0}
+        </p>
+        <p>
+          <span className="font-semibold">💰 Price:</span>{" "}
+          {room.price.toLocaleString()} ₫ / night
+        </p>
         <p className="text-gray-700">{room.description || "No description."}</p>
       </div>
 
       {/* Booking & Report buttons */}
       <div className="border-t pt-4 flex flex-col gap-4 relative">
         <div
-          className={`absolute top-[-25px] left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md ${idUser ? 'hidden' : 'block'}`}
-          style={{ display: idUser ? 'none' : 'block' }}
+          className={`absolute top-[-25px] left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md ${
+            idUser ? "hidden" : "block"
+          }`}
+          style={{ display: idUser ? "none" : "block" }}
         >
           Please login to book or report
         </div>
         <Button
           disabled={!idUser}
-          className={`mt-3 ${idUser ? "bg-green-600 hover:bg-green-700" : "bg-gray-300 cursor-not-allowed"} text-white px-6 py-2 rounded-lg`}
+          onClick={() => router.push(`/pages/confirmation_booking/${id}`)}
+          className={`mt-3 ${
+            idUser
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-gray-300 cursor-not-allowed"
+          } text-white px-6 py-2 rounded-lg`}
         >
           Book now
         </Button>
 
         <Button
           disabled={!idUser}
-          onClick={() => setReportData({ type: "room", idRoom: id, roomTitle: room.title })}
-          className={`mt-3 ${idUser ? "bg-red-600 hover:bg-red-700" : "bg-gray-300 cursor-not-allowed"} text-white px-6 py-2 rounded-lg`}
+          onClick={() =>
+            setReportData({ type: "room", idRoom: id, roomTitle: room.title })
+          }
+          className={`mt-3 ${
+            idUser
+              ? "bg-red-600 hover:bg-red-700"
+              : "bg-gray-300 cursor-not-allowed"
+          } text-white px-6 py-2 rounded-lg`}
         >
           🚩 Report this room
         </Button>
@@ -279,7 +353,9 @@ export default function RoomDetailPage() {
           >
             <option value={0}>All ratings</option>
             {[5, 4, 3, 2, 1].map((star) => (
-              <option key={star} value={star}>{star} stars</option>
+              <option key={star} value={star}>
+                {star} stars
+              </option>
             ))}
           </select>
 
@@ -324,6 +400,7 @@ export default function RoomDetailPage() {
                 </p>
 
                 <button
+                  disabled={!idUser}
                   onClick={() =>
                     setReportData({
                       type: "user",
@@ -344,9 +421,23 @@ export default function RoomDetailPage() {
 
         {/* Pagination */}
         <div className="flex justify-center items-center gap-3 mt-4">
-          <Button variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Previous</Button>
-          <span>Page {page} / {totalPages}</span>
-          <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next →</Button>
+          <Button
+            variant="outline"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            ← Previous
+          </Button>
+          <span>
+            Page {page} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next →
+          </Button>
         </div>
 
         {/* Report modal */}
@@ -355,10 +446,82 @@ export default function RoomDetailPage() {
             isOpen={!!reportData}
             onClose={() => setReportData(null)}
             idRoom={reportData.type === "room" ? reportData.idRoom : undefined}
-            idTargetedUser={reportData.type === "user" ? reportData.idTargetedUser : undefined}
-            roomTitle={reportData.type === "room" ? reportData.roomTitle : undefined}
-            targetedName={reportData.type === "user" ? reportData.targetedName : undefined}
+            idTargetedUser={
+              reportData.type === "user" ? reportData.idTargetedUser : undefined
+            }
+            roomTitle={
+              reportData.type === "room" ? reportData.roomTitle : undefined
+            }
+            targetedName={
+              reportData.type === "user" ? reportData.targetedName : undefined
+            }
           />
+        )}
+      </div>
+
+      {/* ==================== WRITE A REVIEW ==================== */}
+      <div className="border-t pt-8 mt-8">
+        <h3 className="text-xl font-semibold mb-3">Write a Review</h3>
+
+        {!idUser ? (
+          <p className="text-gray-500 italic">
+            Please log in to rate this room.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {/* Rating */}
+
+            <div
+              className={`bg-yellow-100 border border-yellow-300 text-yellow-800 text-sm rounded-md p-3 mb-4 ${
+                booked ? "hidden" : "block"
+              }`}
+              style={{ display: booked ? "none" : "block" }}
+            >
+              You need to book this room successfully at least once to rate
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Rating (1–5 stars)
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRating(star)}
+                    className={`text-2xl ${
+                      star <= rating ? "text-yellow-400" : "text-gray-300"
+                    } hover:scale-110 transition`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Comment */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Your comment
+              </label>
+              <textarea
+                disabled={!booked}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={4}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                placeholder="Share your experience about this room..."
+              />
+            </div>
+
+            {/* Submit button */}
+            <Button
+              onClick={handleSubmitReview}
+              disabled={submittingReview}
+              className={booked ? "bg-blue-600 hover:bg-blue-700 text-white": "bg-gray-300 cursor-not-allowed"}
+            >
+              {submittingReview ? "Submitting..." : "Submit Review"}
+            </Button>
+          </div>
         )}
       </div>
     </div>

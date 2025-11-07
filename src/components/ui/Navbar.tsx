@@ -126,14 +126,20 @@ export default function Navbar() {
                               Manage Rooms
                             </button>
                           )}
-                          {role === "tenant" && (
                             <button
                               className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
                               onClick={() => handleMenuClick("/pages/history_bookings")}
                             >
                               Booking History
                             </button>
-                          )}
+
+                            <button
+                              className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+                              onClick={() => handleMenuClick("/pages/reports")}
+                            >
+                              Reports History
+                            </button>
+
                           {role === "admin" && (
                             <button
                               className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
