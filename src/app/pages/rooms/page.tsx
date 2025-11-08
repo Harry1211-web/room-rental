@@ -51,9 +51,9 @@ export default function RoomsDashboardPage() {
     address: "",
   });
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  console.log(idUser)
+  console.log(idUser);
   useEffect(() => {
-    if(loading) return
+    if (loading) return;
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
@@ -252,7 +252,7 @@ export default function RoomsDashboardPage() {
     });
 
     const data = await res.json();
-    if(data.error) return data.error;
+    if (data.error) return data.error;
 
     if (selectedRoom) setRoomImages(await fetchRoomImages(selectedRoom.id));
     await fetchRooms();
@@ -273,7 +273,10 @@ export default function RoomsDashboardPage() {
   }
 
   async function updateBookingStatus(bookingId: string, status: string) {
-    await supabase.from("bookings").update({ status: status }).eq("id", bookingId);
+    await supabase
+      .from("bookings")
+      .update({ status: status })
+      .eq("id", bookingId);
     if (selectedRoom) {
       const { data } = await supabase
         .from("bookings")
@@ -284,7 +287,7 @@ export default function RoomsDashboardPage() {
         .order("created_at", { ascending: false });
       setBookings(data || []);
 
-      toast.success(`${status} booking`)
+      toast.success(`${status} booking`);
     }
   }
 
@@ -308,7 +311,7 @@ export default function RoomsDashboardPage() {
     >
       {children}
     </button>
-  );  
+  );
   if (loading) return <div>Loading...</div>; // hoặc skeleton UI
   // ---------- Sheet component (slide-in from right) ----------
   const Sheet = ({ open, onClose, title, children }: any) => {
@@ -640,11 +643,11 @@ export default function RoomsDashboardPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {tags.map((tag) => (
+          {tags.map((tag, index) => (
             <div
-              key={tag.id}
+              key={`${tag.id}-${index}`}
               className="px-3 py-1 rounded-md border text-sm max-w-[120px] truncate cursor-default bg-muted hover:bg-muted/80"
-              title={tag.name} // hover xem full text
+              title={tag.name}
             >
               {tag.name}
             </div>

@@ -110,7 +110,7 @@ export default function TimePicker({
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent className="p-0 w-48">
+        <PopoverContent className="p-0 w-48 time-picker-popup">
           <Command>
             <CommandInput placeholder="Search time..." />
             <CommandList>

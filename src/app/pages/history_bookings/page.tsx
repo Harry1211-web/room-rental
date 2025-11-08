@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/app/context/Usercontext";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 interface Booking {
   id: string;
@@ -38,6 +39,7 @@ export default function BookingHistory() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const LIMIT = 5;
+  const route = useRouter();
 
   // Load bookings in pages of 5
   const fetchBookings = async (loadMore = false) => {
@@ -123,7 +125,8 @@ export default function BookingHistory() {
       {bookings.map((b) => (
         <div
           key={b.id}
-          className="border rounded-2xl shadow-md overflow-hidden bg-white hover:shadow-lg transition"
+          className="border rounded-2xl shadow-md overflow-hidden bg-white hover:shadow-lg transition cursor-pointer"
+          onClick={() => {route.push(`/pages/room/${b.rooms.id}`)}}
         >
           <Image
             src={b.rooms?.room_images?.[0]?.img_url || "/no-image.jpg"}
@@ -170,7 +173,7 @@ export default function BookingHistory() {
               <strong>Status:</strong>{" "}
               <span
                 className={`${
-                  b.status === "approved"
+                  b.status === "confirmed"
                     ? "text-green-600"
                     : b.status === "pending"
                     ? "text-yellow-600"
