@@ -39,7 +39,6 @@ export default function BookingByDay({ room, bookings }: any) {
       (slot) => isSameDay(slot.start, date) || isSameDay(slot.end, date)
     );
 
-
   // Reset checkout when checkin changes
   useEffect(() => {
     if (!checkin) {
@@ -105,7 +104,7 @@ export default function BookingByDay({ room, bookings }: any) {
     setLoading(false);
     if (error) return alert("Booking failed");
     toast.success("Booking successful!");
-    route.push(`pages/history_booking`);
+    route.push(`/pages/history_bookings`);
   };
 
   const isBookingConflict = () => {
@@ -129,8 +128,18 @@ export default function BookingByDay({ room, bookings }: any) {
             mode="single"
             selected={checkin}
             onSelect={(date) => {
-              if (isBefore(date, startOfToday())) return;
-              setCheckin(date);
+              const now = new Date();
+              const today = startOfToday();
+
+              // Nếu chọn ngày trong quá khứ -> bỏ qua
+              if (isBefore(date, today)) return;
+
+              // Nếu chọn ngày hôm nay -> gán giờ bằng giờ hiện tại
+              if (isSameDay(date, now)) {
+                date.setHours(now.getHours(), now.getMinutes(), 0, 0);
+              }
+
+              setCheckin(new Date(date));
             }}
             dayClassName={(date) => {
               if (isBefore(date, startOfToday()))

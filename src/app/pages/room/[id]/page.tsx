@@ -82,9 +82,11 @@ export default function RoomDetailPage() {
           const { count } = await supabase
             .from("bookings")
             .select("*", { count: "exact", head: true })
-            .eq("user_id", idUser)
-            .eq("room_id", id);
+            .eq("tenant_id", idUser)
+            .eq("room_id", id)
+            // .eq("status", "confirmed"); // lọc trạng thái
 
+          console.log(count)
           setBooked((count ?? 0) > 0);
           console.log(booked)
         }
