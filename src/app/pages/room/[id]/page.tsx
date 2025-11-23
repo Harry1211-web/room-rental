@@ -138,9 +138,9 @@ export default function RoomDetailPage() {
         setRoom(roomData as Room);
         setImages((imgData ?? []).map((i: RoomImage) => i.img_url));
         setTags(
-          ((tagData as any[] | null) ?? []).map((t) => t.tags?.name ?? "")
+          ((tagData as { tags: { name: string } }[] | null) ?? []).map((t) => t.tags?.name ?? "")
         );
-        setReviews(reviewsData ?? []);
+        setReviews(reviewsData as ReviewWithUser[] ?? []);
         setAvgRating(average);
       } catch (err) {
         console.error(err);
@@ -232,7 +232,7 @@ export default function RoomDetailPage() {
         .eq("room_id", id)
         .order("created_at", { ascending: false });
 
-      setReviews(newReviews ?? []);
+      setReviews(newReviews as unknown as ReviewWithUser[] ?? []);
     }
   };
 
@@ -243,7 +243,7 @@ export default function RoomDetailPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-8 pt-32">
       <h1 className="text-3xl font-bold">{room.title}</h1>
-      <p className="text-gray-600">{room.city}</p>
+      <p className="text-gray-600 dark:text-gray-200">{room.city}</p>
 
       {/* Rating */}
       {avgRating ? (
@@ -300,9 +300,9 @@ export default function RoomDetailPage() {
         </p>
         <p>
           <span className="font-semibold">💰 Price:</span>{" "}
-          {room.price.toLocaleString()} ₫ / night
+          ${room.price.toLocaleString()} / night
         </p>
-        <p className="text-gray-700">{room.description || "No description."}</p>
+        <p className="text-gray-700 dark:text-gray-300">{room.description || "No description."}</p>
       </div>
 
       {/* Booking & Report buttons */}
@@ -355,7 +355,7 @@ export default function RoomDetailPage() {
           >
             <option value={0}>All ratings</option>
             {[5, 4, 3, 2, 1].map((star) => (
-              <option key={star} value={star}>
+              <option className="text-gray-700 dark:text-gray-300" key={star} value={star}>
                 {star} stars
               </option>
             ))}
@@ -366,10 +366,10 @@ export default function RoomDetailPage() {
             onChange={(e) => setSortOrder(e.target.value)}
             className="border rounded px-3 py-1"
           >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="high">Highest rating</option>
-            <option value="low">Lowest rating</option>
+            <option className="text-gray-700 dark:text-gray-300" value="newest ">Newest</option>
+            <option className="text-gray-700 dark:text-gray-300" value="oldest">Oldest</option>
+            <option className="text-gray-700 dark:text-gray-300" value="high">Highest rating</option>
+            <option className="text-gray-700 dark:text-gray-300" value="low">Lowest rating</option>
           </select>
         </div>
 
@@ -396,7 +396,7 @@ export default function RoomDetailPage() {
                     <p className="text-yellow-500">⭐ {review.rating}/5</p>
                   </div>
                 </div>
-                <p className="mt-2 text-gray-700">{review.comment}</p>
+                <p className="mt-2 text-gray-700 dark:text-gray-300">{review.comment}</p>
                 <p className="text-sm text-gray-400">
                   {format(new Date(review.created_at), "dd/MM/yyyy")}
                 </p>

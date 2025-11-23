@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import { format } from "date-fns";
 
 // ==================== TYPES ====================
 interface UserProfile {
@@ -107,10 +108,10 @@ export default function UserPage() {
         if (roomsError) throw roomsError;
 
         setUser(userData);
-        setReviews(reviewsData || []);
-        setRooms(roomsData || []);
-        setEditName(userData.name || "");
-        setEditBio(userData.bio || "");
+        setReviews(reviewsData as unknown as ReviewWithRoom[] || []);
+        setRooms(roomsData as unknown as Room[] || []);
+        setEditName(userData?.name || "");
+        setEditBio(userData?.bio || "");
       } catch (err) {
         console.error("Error fetching user data:", err);
       } finally {
@@ -208,10 +209,10 @@ export default function UserPage() {
           ) : (
             <>
               <h1 className="text-4xl font-bold">{user.name}</h1>
-              <p className="text-gray-600 mt-1">{user.email}</p>
+              <p className="text-gray-600 mt-1 dark:text-gray-300">{user.email}</p>
               {user.bio && <p className="mt-2 text-gray-700">{user.bio}</p>}
               <p className="mt-1 text-gray-400 text-sm">
-                Joined {new Date(user.created_at || "").toLocaleDateString()}
+                Joined {format(new Date(user.created_at || ""), "dd/MM/yyyy")}
               </p>
               {isOwner && (
                 <button
@@ -248,8 +249,8 @@ export default function UserPage() {
                 )}
                 <div className="p-4">
                   <h3 className="font-semibold text-lg">{room.title}</h3>
-                  <p className="text-gray-500">{room.city}</p>
-                  <p className="mt-1 font-bold">{room.price.toLocaleString()} ₫</p>
+                  <p className="text-gray-500 dark:text-gray-300">{room.city}</p>
+                  <p className="mt-1 font-bold">${room.price.toLocaleString()} / night</p>
                 </div>
               </div>
             ))}
@@ -270,7 +271,7 @@ export default function UserPage() {
           >
             <option value={0}>All ratings</option>
             {[5, 4, 3, 2, 1].map((star) => (
-              <option key={star} value={star}>{star} stars</option>
+              <option className="text-gray-700 dark:text-gray-300" key={star} value={star}>{star} stars</option>
             ))}
           </select>
 
@@ -279,10 +280,10 @@ export default function UserPage() {
             onChange={(e) => setSortOrder(e.target.value)}
             className="border rounded px-3 py-1"
           >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="high">Highest rating</option>
-            <option value="low">Lowest rating</option>
+            <option className="text-gray-700 dark:text-gray-300" value="newest">Newest</option>
+            <option className="text-gray-700 dark:text-gray-300" value="oldest">Oldest</option>
+            <option className="text-gray-700 dark:text-gray-300" value="high">Highest rating</option>
+            <option className="text-gray-700 dark:text-gray-300" value="low">Lowest rating</option>
           </select>
         </div>
 
@@ -297,13 +298,13 @@ export default function UserPage() {
                 >
                   {review.rooms?.title || "Unknown room"}
                 </h3>
-                <p className="text-gray-500 text-sm">
-                  {review.rooms?.city} | {review.rooms?.price?.toLocaleString()} ₫
+                <p className="text-gray-500 dark:text-gray-300 text-sm">
+                  {review.rooms?.city} | ${review.rooms?.price?.toLocaleString()}
                 </p>
                 <p className="text-yellow-500 font-semibold mt-1">⭐ {review.rating}/5</p>
-                <p className="mt-2 text-gray-700">{review.comment}</p>
+                <p className="mt-2 text-gray-700 dark:text-gray-300">{review.comment}</p>
                 <p className="text-sm text-gray-400">
-                  {new Date(review.created_at).toLocaleDateString()}
+                  {format(new Date(review.created_at), "dd/MM/yyyy")}
                 </p>
               </div>
             ))}

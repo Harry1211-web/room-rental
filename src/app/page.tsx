@@ -1,28 +1,65 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useUser } from "./context/Usercontext";
 import { useAuthSync } from "./useAuthSync";
 import AdminPage from "./pages/main/AdminPage";
 import RecomendPage from "./pages/main/RecomendPage";
-import { Button } from "../components/ui/button";
+import { Footer } from "../components/Footer";
 
 export default function Home() {
-  const { role, loading, logout } = useUser();
+  const { role, loading } = useUser();
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isPreloading, setIsPreloading] = useState(false); 
+  const [cdnImages, setCdnImages] = useState<string[]>([]); 
   useAuthSync(60);
 
-  if (loading) {
-    return <div>Loading...</div>;
+  const preloadImages = async () => {
+    if (role === "admin") return; 
+
+    setIsPreloading(true);
+
+    const imagesToPreload = [
+      "/loading.webp",
+      "https://cdn-icons-png.flaticon.com/512/619/619153.png",
+      
+    ];
+
+    //Preload the images
+    const preloadPromises = imagesToPreload.map(src => new Promise(resolve => {
+      const img = new Image();
+      img.src = src;
+      img.onload = resolve;
+      img.onerror = resolve;
+    }));
+
+    await Promise.all(preloadPromises);
+
+    setIsImageLoaded(true);
+    setIsPreloading(false);
+  };
+
+  //Preload images only once, when the component mounts
+  useEffect(() => {
+    if (!loading) {
+      preloadImages();
+    }
+  }, [loading, role]);
+
+  if (loading || isPreloading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="pt-24">
-      {role == "admin" ? <AdminPage /> : <RecomendPage />}
-      <Button
-        onClick={logout}
-        className="bg-red-500 hover:bg-red-600 text-white"
-      >
-        Logout
-      </Button>
+    <div className="min-h-screen flex flex-col">
+      <main className="flex-1 pt-24"> {/*Added flex layout */}
+        {role === "admin" ? <AdminPage /> : <RecomendPage />}
+      </main>
+      {role !== "admin" && <Footer />} {/* Add footer component only for non-admin users */}
     </div>
   );
 }

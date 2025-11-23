@@ -19,12 +19,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*Preload critical resources*/}
+        <link 
+          rel="preload" 
+          href="/loading.webp" 
+          as="image" 
+          type="image/webp"
+        />
+      </head>
       <body className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors">
         <Providers>
           <UserProvider>
             <Navbar />
             <main className="min-h-screen">{children}</main>
-            <Toaster position="bottom-right" richColors  />
+            <Toaster position="bottom-right" richColors theme="system" />
           </UserProvider>
         </Providers>
       </body>

@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { EditablePopup } from "@/components/Popup";
 import { ImagePreviewModal } from "../../components/PreviewImageModal";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/solid";
 import { HoverCard } from "../../components/HoverCard";
 import { useRouter } from "next/navigation";
 
@@ -90,12 +89,17 @@ export default function VerificationsPage() {
   // Edit and Delete
   async function handleSave(v: Verification) {
     try {
+      // Convert verified string to boolean if needed
+      const verifiedValue = typeof v.verified === "string" 
+        ? v.verified === "true" 
+        : v.verified;
+      
       const { error } = await supabase
         .from("verifications")
         .update({
           type: v.type,
           proof: v.proof,
-          verified: v.verified,
+          verified: verifiedValue,
         })
         .eq("id", v.id);
       if (error) throw error;
@@ -118,7 +122,7 @@ export default function VerificationsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">✅ Verifications</h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">✅ Verifications</h1>
 
       {/* 🔍 Search & Filter */}
       <div className="flex flex-wrap gap-4 mb-4">
@@ -127,14 +131,14 @@ export default function VerificationsPage() {
           placeholder="Search landlord name, email, or ID"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border px-3 py-2 rounded shadow-sm w-128"
+          className="border dark:border-gray-700 px-3 py-2 rounded shadow-sm w-full sm:w-96 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         />
         <select
           value={filterStatus}
           onChange={(e) =>
             setFilterStatus(e.target.value as (typeof statusOptions)[number])
           }
-          className="border px-3 py-2 rounded shadow-sm"
+          className="border dark:border-gray-700 px-3 py-2 rounded shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         >
           {statusOptions.map((opt) => (
             <option key={opt} value={opt}>
@@ -151,7 +155,21 @@ export default function VerificationsPage() {
       {/* Table */}
       <DataTable<Verification>
         columns={[
-          { key: "landlord_id", label: "Landlord ID" },
+          { 
+            key: "landlord_id", 
+            label: "Landlord ID",
+            render: (r) => r.landlord_id ? (
+              <HoverCard content={
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Full ID:</strong> {r.landlord_id}</p>
+                </div>
+              }>
+                <span className="cursor-help" title={r.landlord_id}>
+                  {r.landlord_id.substring(0, 12)}...
+                </span>
+              </HoverCard>
+            ) : "—"
+          },
           {
             key: "users",
             label: "Landlord",
@@ -159,15 +177,15 @@ export default function VerificationsPage() {
               r.users?.name || r.users?.email ? (
                 <HoverCard
                   content={
-                    <div className="space-y-1 text-sm">
-                      <p><strong>Name:</strong> {r.users?.name ?? "N/A"}</p>
-                      <p><strong>Email:</strong> {r.users?.email ?? "N/A"}</p>
-                      <p><strong>ID:</strong> {r.landlord_id}</p>
+                    <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+                      <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.users?.name ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {r.users?.email ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.landlord_id}</p>
                     </div>
                   }
                 >
                   <button
-                    className="text-blue-600 hover:underline"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
                     onClick={() => router.push(`pages/user/${r.landlord_id}`)}
                   >
                     {r.users?.name ?? r.users?.email ?? "No name"}
@@ -195,6 +213,7 @@ export default function VerificationsPage() {
           {
             key: "created_at",
             label: "Date sent",
+            width: "w-[100px]",
             render: (r) => new Date(r.created_at).toLocaleDateString(),
           },
           {
@@ -205,8 +224,8 @@ export default function VerificationsPage() {
                 onClick={() => updateStatus(r.id, r.verified)}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-1 transition-all duration-200 shadow-sm ${
                   r.verified
-                    ? "bg-green-100 text-green-800 hover:bg-green-200"
-                    : "bg-red-100 text-red-700 hover:bg-red-200"
+                    ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800"
+                    : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800"
                 }`}
               >
                 {r.verified ? "✅ Approved" : "❌ Refused"}
@@ -215,24 +234,8 @@ export default function VerificationsPage() {
           },
         ]}
         data={filteredData}
-        renderActions={(row) => (
-          <div className="flex gap-2 justify-center">
-            <button
-              onClick={() => setEditingVerification(row)}
-              className="flex items-center gap-1 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium px-3 py-1 rounded-full shadow-sm transition"
-            >
-              <PencilSquareIcon className="w-4 h-4" />
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(row)}
-              className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 font-medium px-3 py-1 rounded-full shadow-sm transition"
-            >
-              <TrashIcon className="w-4 h-4" />
-              Delete
-            </button>
-          </div>
-        )}
+        onEdit={(row) => setEditingVerification(row)}
+        onDelete={handleDelete}
         rowKey="id"
       />
 
@@ -253,8 +256,8 @@ export default function VerificationsPage() {
               label: "Status",
               type: "select",
               options: [
-                { label: "Approved", value: true },
-                { label: "Refused", value: false },
+                { key: "approved", label: "Approved", value: "true" },
+                { key: "refused", label: "Refused", value: "false" },
               ],
             },
           ]}

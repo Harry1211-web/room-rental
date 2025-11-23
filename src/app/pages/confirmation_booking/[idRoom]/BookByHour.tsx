@@ -183,7 +183,7 @@ export default function BookingByHour({ room, bookings }: any) {
 
       {/* Summary */}
       {checkin && checkout && (
-        <div className="mt-4 p-3 border rounded bg-gray-50">
+        <div className="mt-4 p-3 border rounded bg-gray-50 dark:text-gray-700">
           <p>
             <strong>Check-in:</strong> {format(checkin, "dd/MM/yyyy HH:mm")}
           </p>
@@ -191,7 +191,7 @@ export default function BookingByHour({ room, bookings }: any) {
             <strong>Checkout:</strong> {format(checkout, "dd/MM/yyyy HH:mm")}
           </p>
           <p className="mt-2 font-semibold text-green-600">
-            Total price: {totalPrice}₫
+            Total price: ${totalPrice}
           </p>
         </div>
       )}

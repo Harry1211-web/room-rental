@@ -68,7 +68,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      toast.success("Đăng xuất thành công!");
+      setIdUser(null);
+      setRole(null);
+      toast.success("Logout successfully!");
       localStorage.setItem("isLogin", "false");
       localStorage.setItem("avatar_url", "");
       setIdUser(null);
@@ -76,7 +78,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       router.push("/");
     } catch (err) {
       console.error(err);
-      toast.error("Đăng xuất thất bại!");
+      toast.error("Logout failed!");
     }
   };
 

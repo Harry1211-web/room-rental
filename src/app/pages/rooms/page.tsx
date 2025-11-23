@@ -355,7 +355,7 @@ export default function RoomsDashboardPage() {
     <div className="p-6 pt-32">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold">Rooms Management</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 dark:text-gray-700">
           <Btn
             onClick={() => {
               resetForm();
@@ -388,10 +388,10 @@ export default function RoomsDashboardPage() {
             </div>
 
             <h2 className="text-lg font-medium">{r.title}</h2>
-            <p className="text-sm text-muted-foreground">
-              {r.city} · {r.price} vnđ
+            <p className="text-sm text-muted-foreground dark:text-gray-300">
+              {r.city} · ${r.price}
             </p>
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap gap-2 mt-2 dark:text-gray-700">
               {(r.rooms_tags || []).map((rt: any) => (
                 <span
                   key={rt.tag_id}
@@ -402,12 +402,12 @@ export default function RoomsDashboardPage() {
               ))}
             </div>
 
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-3 dark:text-gray-700">
               <Btn onClick={() => startEdit(r)}>Edit</Btn>
               <Btn onClick={() => openImages(r)}>Images</Btn>
               <Btn onClick={() => openBookings(r)}>Show Bookings</Btn>
               <Btn
-                className="bg-red-100 border-red-300"
+                className="bg-red-100 border-red-300 dark:bg-red-500 dark:border-b-red-800"
                 onClick={() => deleteRoom(r.id)}
               >
                 Delete
@@ -426,7 +426,7 @@ export default function RoomsDashboardPage() {
         }}
         title="Create New Room"
       >
-        <div className="space-y-2">
+        <div className="space-y-2 dark:text-gray-700">
           <input
             className="w-full p-2 border rounded"
             placeholder="Title"
@@ -505,7 +505,7 @@ export default function RoomsDashboardPage() {
         }}
         title="Edit Room"
       >
-        <div className="space-y-2">
+        <div className="space-y-2 dark:text-gray-700">
           <input
             className="w-full p-2 border rounded"
             placeholder="Title"
@@ -573,7 +573,7 @@ export default function RoomsDashboardPage() {
         }}
         title={selectedRoom ? `Images for: ${selectedRoom.title}` : "Images"}
       >
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end mb-4 dark:text-gray-700">
           <Btn onClick={() => fileInputRef.current?.click()}>Upload Image</Btn>
         </div>
 
@@ -591,7 +591,7 @@ export default function RoomsDashboardPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {roomImages.map((img: RoomImage) => (
-            <div key={img.id} className="border rounded p-2">
+            <div key={img.id} className="border rounded p-2 dark:border-b-red-300">
               <img
                 src={img.img_url}
                 alt="room"
@@ -603,7 +603,7 @@ export default function RoomsDashboardPage() {
                 </span>
                 <button
                   onClick={() => deleteImage(img.id)}
-                  className="text-xs px-2 py-1 rounded bg-red-100"
+                  className="text-xs px-2 py-1 rounded bg-red-100 dark:text-gray-700 dark:bg-red-500"
                 >
                   Delete
                 </button>
