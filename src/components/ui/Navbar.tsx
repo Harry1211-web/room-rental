@@ -16,7 +16,7 @@ import { NavbarAdvancedSearchContainer } from "./NavbarAdvancedSearchContainer";
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { idUser, role, loading, logout } = useUser();
+  const { idUser, role, loading, logout, setLoading } = useUser();
   
   const [dropdownMenuOpen, setDropdownMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -71,6 +71,7 @@ export default function Navbar() {
           height={40}
           className="dark:invert"
           style={{ width: "auto", height: "auto" }}
+          onClick={() => {setLoading(true)}}
         />
         <span className="font-bold text-xl text-gray-800 dark:text-gray-100">
           Room Rental
@@ -91,7 +92,7 @@ export default function Navbar() {
         {/* Theme Toggle */}
         {mounted && (
           <button
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            onClick={() => {setTheme(theme === "light" ? "dark" : "light")}}
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
             aria-label="Toggle theme"
           >
@@ -111,11 +112,11 @@ export default function Navbar() {
             <div className="flex items-center gap-3 relative">
               {!loading && !isLoggedIn ? (
                 <div className="flex gap-2">
-                  <Button onClick={() => router.push("/pages/auth?mode=login")}>
+                  <Button onClick={() => {router.push("/pages/auth?mode=login"), setLoading(true)}}>
                     Login
                   </Button>
                   <Button
-                    onClick={() => router.push("/pages/auth?mode=register")}
+                    onClick={() => {router.push("/pages/auth?mode=register"), setLoading(true)}}
                   >
                     Sign Up
                   </Button>
@@ -148,7 +149,7 @@ export default function Navbar() {
                         {role === "landlord" && (
                           <button
                             className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
-                            onClick={() => handleMenuClick("/pages/rooms")}
+                            onClick={() => {handleMenuClick("/pages/rooms"), setLoading(true)}}
                           >
                             Manage Rooms
                           </button>
@@ -157,14 +158,14 @@ export default function Navbar() {
                           <>
                           <button
                           className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
-                          onClick={() => handleMenuClick("/pages/history_bookings")}
+                          onClick={() => {handleMenuClick("/pages/history_bookings"), setLoading(true)}}
                         >
                           Booking History
                         </button>
 
                         <button
                           className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
-                          onClick={() => handleMenuClick("/pages/reports")}
+                          onClick={() => {handleMenuClick("/pages/reports"), setLoading(true)}}
                         >
                           Reports
                         </button>
@@ -174,7 +175,7 @@ export default function Navbar() {
 
                         <button
                           className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
-                          onClick={() => handleMenuClick(`/pages/user/${idUser}`)}
+                          onClick={() => {handleMenuClick(`/pages/user/${idUser}`), setLoading(true)}}
                         >
                           Profile & Settings
                         </button>

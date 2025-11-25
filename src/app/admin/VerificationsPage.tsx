@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 interface Verification {
   id: string;
   landlord_id: string | null;
+  room_id: string | null;
   type?: string | null;
   proof?: string | null;
   verified: boolean | null;
@@ -20,6 +21,9 @@ interface Verification {
     name: string | null;
     email?: string | null;
   };
+  room? :{
+    name: string | null;
+  }
 }
 
 export default function VerificationsPage() {
@@ -156,8 +160,8 @@ export default function VerificationsPage() {
       <DataTable<Verification>
         columns={[
           { 
-            key: "landlord_id", 
-            label: "Landlord ID",
+            key: "id", 
+            label: "ID",
             render: (r) => r.landlord_id ? (
               <HoverCard content={
                 <div className="text-gray-900 dark:text-gray-100">
@@ -181,6 +185,28 @@ export default function VerificationsPage() {
                       <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.users?.name ?? "N/A"}</p>
                       <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {r.users?.email ?? "N/A"}</p>
                       <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.landlord_id}</p>
+                    </div>
+                  }
+                >
+                  <button
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    onClick={() => router.push(`pages/user/${r.landlord_id}`)}
+                  >
+                    {r.users?.name ?? r.users?.email ?? "No name"}
+                  </button>
+                </HoverCard>
+              ) : "—",
+          },
+          {
+            key: "room",
+            label: "Room",
+            render: (r) =>
+              r.room?.name ? (
+                <HoverCard
+                  content={
+                    <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+                      <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.room?.name ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.room_id}</p>
                     </div>
                   }
                 >

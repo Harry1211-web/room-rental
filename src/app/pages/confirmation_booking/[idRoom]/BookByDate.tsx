@@ -128,31 +128,24 @@ export default function BookingByDay({ room, bookings }: any) {
             mode="single"
             selected={checkin}
             onSelect={(date) => {
+              if (!date) {
+                setCheckin(null);
+                return;
+              }
               const now = new Date();
               const today = startOfToday();
 
-              // Nếu chọn ngày trong quá khứ -> bỏ qua
               if (isBefore(date, today)) return;
 
-              // Nếu chọn ngày hôm nay -> gán giờ bằng giờ hiện tại
               if (isSameDay(date, now)) {
                 date.setHours(now.getHours(), now.getMinutes(), 0, 0);
               }
 
               setCheckin(new Date(date));
             }}
-            dayClassName={(date) => {
-              if (isBefore(date, startOfToday()))
-                return "opacity-40 cursor-not-allowed";
-              if (
-                bookedSlots.some(
-                  (slot) =>
-                    isSameDay(slot.start, date) || isSameDay(slot.end, date)
-                )
-              )
-                return "bg-red-200 text-red-700";
-              return "";
-            }}
+            disabled={[
+              (date) => isBefore(date, startOfToday()), // disable ngày quá khứ
+            ]}
           />
         </div>
 
@@ -166,9 +159,11 @@ export default function BookingByDay({ room, bookings }: any) {
               setCheckout(date);
             }}
             month={checkin || undefined} // show month of check-in
-            disabledDate={(date) =>
-              isDayFullyBooked(date) || (checkin && isBefore(date, checkin))
-            }
+            disabled={[
+              (date) => isBefore(date, checkin || startOfToday()), // không cho checkout trước check-in
+              (date) => isDayFullyBooked(date),
+              (date) => isSameDay(date, checkin),  
+            ]}
           />
         </div>
       </div>
@@ -196,7 +191,7 @@ export default function BookingByDay({ room, bookings }: any) {
               : undefined
           }
           bookedSlots={bookedSlots}
-          disable={!checkin}
+          disable={!checkin || isBookingConflict()}
         />
       </div>
 

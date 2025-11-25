@@ -32,15 +32,15 @@ interface Landlord {
 }
 
 export default function BookingHistory() {
-  const { idUser } = useUser();
+  const { idUser, setLoading } = useUser();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [landlord, setLandlord] = useState<Landlord | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading1] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const LIMIT = 5;
   const route = useRouter();
-
+  useEffect(() => {setLoading(false)})
   // Load bookings in pages of 5
   const fetchBookings = async (loadMore = false) => {
     if (!idUser) return;
@@ -71,7 +71,7 @@ export default function BookingHistory() {
     if (data.length < LIMIT) setHasMore(false);
 
     setBookings((prev) => (loadMore ? [...prev, ...(data as unknown as Booking[])] : (data as unknown as Booking[])));
-    setLoading(false);
+    setLoading1(false);
   };
 
   // Initial fetch
@@ -88,7 +88,7 @@ export default function BookingHistory() {
         hasMore &&
         !loading
       ) {
-        setLoading(true);
+        setLoading1(true);
         setOffset((prev) => prev + LIMIT);
       }
     };

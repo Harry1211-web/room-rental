@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
 import { format } from "date-fns";
+import { useUser } from "@/app/context/Usercontext";
 
 // ==================== TYPES ====================
 interface UserProfile {
@@ -12,7 +13,6 @@ interface UserProfile {
   name: string;
   email: string;
   avatar_url?: string | null;
-  bio?: string | null;
   created_at?: string;
 }
 
@@ -42,19 +42,22 @@ interface Room {
 export default function UserPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { setLoading } = useUser();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [reviews, setReviews] = useState<ReviewWithRoom[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading1] = useState(true);
 
   const [filterRating, setFilterRating] = useState(0);
   const [sortOrder, setSortOrder] = useState("newest");
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editBio, setEditBio] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+
+  useEffect(() => {setLoading(false)})
 
   // ==================== FETCH CURRENT USER ====================
   useEffect(() => {
@@ -77,7 +80,7 @@ export default function UserPage() {
     if (!id) return;
 
     const fetchUser = async () => {
-      setLoading(true);
+      setLoading1(true);
       try {
         const { data: userData, error: userError } = await supabase
           .from("users")
@@ -111,11 +114,11 @@ export default function UserPage() {
         setReviews(reviewsData as unknown as ReviewWithRoom[] || []);
         setRooms(roomsData as unknown as Room[] || []);
         setEditName(userData?.name || "");
-        setEditBio(userData?.bio || "");
+        setEditEmail(userData?.email || "");
       } catch (err) {
         console.error("Error fetching user data:", err);
       } finally {
-        setLoading(false);
+        setLoading1(false);
       }
     };
 
@@ -152,7 +155,7 @@ export default function UserPage() {
     try {
       const { data, error } = await supabase
         .from("users")
-        .update({ name: editName, bio: editBio })
+        .update({ name: editName, email: editEmail })
         .eq("id", user.id)
         .select()
         .single();
@@ -185,11 +188,12 @@ export default function UserPage() {
                 className="border rounded px-3 py-1 w-full"
                 placeholder="Name"
               />
-              <textarea
-                value={editBio}
-                onChange={(e) => setEditBio(e.target.value)}
+              <input
+                type="text"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
                 className="border rounded px-3 py-2 w-full"
-                placeholder="Bio"
+                placeholder="Email"
               />
               <div className="flex gap-3">
                 <button
@@ -210,7 +214,6 @@ export default function UserPage() {
             <>
               <h1 className="text-4xl font-bold">{user.name}</h1>
               <p className="text-gray-600 mt-1 dark:text-gray-300">{user.email}</p>
-              {user.bio && <p className="mt-2 text-gray-700">{user.bio}</p>}
               <p className="mt-1 text-gray-400 text-sm">
                 Joined {format(new Date(user.created_at || ""), "dd/MM/yyyy")}
               </p>

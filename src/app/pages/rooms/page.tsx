@@ -21,16 +21,17 @@ type Room = any;
 type Tag = any;
 type Booking = any;
 type RoomImage = any;
+type Verification = any
 
 export default function RoomsDashboardPage() {
-  const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [roomImages, setRoomImages] = useState<RoomImage[]>([]);
+  const [verification, setVerification] = useState<Verification[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { idUser, loading } = useUser();
+  const { idUser, loading, setLoading } = useUser();
 
   // modal / sheet visibility
   const [showNewModal, setShowNewModal] = useState(false);
@@ -38,6 +39,7 @@ export default function RoomsDashboardPage() {
   const [showImagesModal, setShowImagesModal] = useState(false);
   const [showTagsModal, setShowTagsModal] = useState(false);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   // Form state (used for both create and edit)
   const [form, setForm] = useState({
@@ -51,7 +53,9 @@ export default function RoomsDashboardPage() {
     address: "",
   });
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  console.log(idUser);
+
+  useEffect(() => {setLoading(false)})
+
   useEffect(() => {
     if (loading) return;
     loadAll();
@@ -240,7 +244,7 @@ export default function RoomsDashboardPage() {
   }
 
   async function deleteImage(imgId: string) {
-    if (!confirm("Xóa ảnh này?")) return;
+    if (!confirm("Delete this picture?")) return;
     const formData = new FormData();
     formData.append("action", "delete-one");
     formData.append("idRoom", selectedRoom.id);
@@ -289,6 +293,60 @@ export default function RoomsDashboardPage() {
 
       toast.success(`${status} booking`);
     }
+  }
+
+  //-----------Verification----------
+  async function openVerification(room: Room) {
+    setSelectedRoom(room);
+    const { data } = await supabase
+      .from("verifications")
+      .select("*")
+      .eq("room_id", room.id)
+    setVerification(data || []);
+    setShowVerificationModal(true);
+  }
+
+  async function uploadVerification(file?: File) {
+    if (!selectedRoom) return;
+    if (!file) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("verifications")
+      .insert([
+        {
+          verified: false,
+          type: "certificate",
+          room_id: selectedRoom.id
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("❌ Error creating report:", error);
+      alert("❌ Failed to submit the report!");
+      setLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("verificationId", data.id);
+
+    const res = await fetch("/api/verification", {
+      method: "POST",
+      body: formData,
+    });
+
+    const dataRespone = await res.json();
+    await supabase
+      .from("verifications")
+      .update({proof: dataRespone.url})
+      .eq("id", data.id);
+    setVerification(await openVerification(selectedRoom));
+    await fetchRooms();
   }
 
   // ---------- UI helpers ----------
@@ -402,10 +460,11 @@ export default function RoomsDashboardPage() {
               ))}
             </div>
 
-            <div className="flex gap-2 mt-3 dark:text-gray-700">
+            <div className="flex flex-wrap gap-2 mt-3 dark:text-gray-700">
               <Btn onClick={() => startEdit(r)}>Edit</Btn>
               <Btn onClick={() => openImages(r)}>Images</Btn>
               <Btn onClick={() => openBookings(r)}>Show Bookings</Btn>
+              <Btn onClick={() => openVerification(r)}>Verification</Btn>
               <Btn
                 className="bg-red-100 border-red-300 dark:bg-red-500 dark:border-b-red-800"
                 onClick={() => deleteRoom(r.id)}
@@ -535,7 +594,8 @@ export default function RoomsDashboardPage() {
             <div className="mb-1 text-sm">Tags (click to toggle)</div>
             <div className="flex flex-wrap gap-2">
               {tags.map((t: Tag) => (
-                <button
+                t.name != "verified" && (
+                  <button
                   key={t.tag_id}
                   onClick={() => toggleTagSelection(t.tag_id)}
                   className={`px-2 py-1 rounded text-sm border ${
@@ -546,6 +606,7 @@ export default function RoomsDashboardPage() {
                 >
                   {t.name}
                 </button>
+                )
               ))}
             </div>
           </div>
@@ -613,6 +674,51 @@ export default function RoomsDashboardPage() {
         </div>
       </Sheet>
 
+      {/* ---------- Verification Sheet ---------- */}
+
+
+      <Sheet
+        open={showVerificationModal}
+        onClose={() => {
+          setSelectedRoom(null);
+          setShowVerificationModal(false);
+        }}
+        title={selectedRoom ? `Verification for: ${selectedRoom.title}` : "Images"}
+      >
+        <div className="flex justify-end mb-4 dark:text-gray-700">
+          <Btn onClick={() => fileInputRef.current?.click()}>Upload Verification</Btn>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            if (f) await uploadVerification(f);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+        />
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {verification.map((v: Verification) => (
+            <div key={v.id} className="border rounded p-2 dark:border-b-red-300">
+              <img
+                src={v.proof}
+                alt="room"
+                className="w-full h-32 object-cover rounded"
+              />
+              <div className="flex justify-between mt-2">
+                <span className="text-xs text-gray-600">
+                  #{String(v.id).slice(0, 6)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Sheet>
+
       {/* ---------- Tags Sheet ---------- */}
       <Sheet
         open={showTagsModal}
@@ -631,6 +737,8 @@ export default function RoomsDashboardPage() {
               const val = (
                 document.getElementById("new-tag") as HTMLInputElement
               )?.value;
+
+              if (val.toString().toLocaleLowerCase() == "verified") {toast.error("You cannot add verified tags")}
               if (val) {
                 createTag(val);
                 (document.getElementById("new-tag") as HTMLInputElement).value =
@@ -697,7 +805,7 @@ export default function RoomsDashboardPage() {
                     className="px-3 py-4 bg-red-100 rounded"
                     onClick={() => updateBookingStatus(b.id, "cancelled")}
                   >
-                    Cancel
+                    Refuse
                   </button>
                 </div>
               </div>

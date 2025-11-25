@@ -44,7 +44,7 @@ interface ReviewWithUser {
 export default function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { idUser } = useUser();
+  const { idUser, setLoading } = useUser();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [images, setImages] = useState<string[]>([]);
@@ -58,7 +58,7 @@ export default function RoomDetailPage() {
   const [booked, setBooked] = useState<boolean>(false);
 
   const [avgRating, setAvgRating] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading1] = useState(true);
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -69,13 +69,13 @@ export default function RoomDetailPage() {
   >(null);
 
   const [submittingReview, setSubmittingReview] = useState(false);
-
+  useEffect(() => {setLoading(false)})
   // ==================== FETCH ROOM DATA ====================
   useEffect(() => {
     if (!id) return;
 
     const fetchRoomDetail = async () => {
-      setLoading(true);
+      setLoading1(true);
 
       try {
         if (idUser) {
@@ -145,7 +145,7 @@ export default function RoomDetailPage() {
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        setLoading1(false);
       }
     };
 

@@ -8,10 +8,11 @@ import RecomendPage from "./pages/main/RecomendPage";
 import { Footer } from "../components/Footer";
 
 export default function Home() {
-  const { role, loading } = useUser();
+  const { role, loading, setLoading } = useUser();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false); 
   const [cdnImages, setCdnImages] = useState<string[]>([]); 
+  useEffect (() => {setLoading(false)})
   useAuthSync(60);
 
   const preloadImages = async () => {

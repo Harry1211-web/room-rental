@@ -8,6 +8,7 @@ import RegisterForm from "./RegisterForm";
 import ForgotForm from "./ForgotForm";
 
 export default function AuthPage() {
+  const { setLoading } = useUser();
   const router = useRouter();
   const { setUserFromServer } = useUser();
   const searchParams = useSearchParams();
@@ -16,6 +17,8 @@ export default function AuthPage() {
 
   // Dark mode state
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {setLoading(false)})
 
   useEffect(() => {
     // Detect system dark mode preference

@@ -22,9 +22,9 @@ interface Report {
 }
 
 export default function ReportHistory() {
-  const { idUser } = useUser();
+  const { idUser, setLoading } = useUser();
   const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading1] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export default function ReportHistory() {
 
     if (statusFilter !== "all") query.eq("status", statusFilter);
 
-    if (offsetRef.current === 0) setLoading(true);
+    if (offsetRef.current === 0) setLoading1(true);
     else setLoadingMore(true);
 
     const { data, error } = await query;
@@ -69,13 +69,17 @@ export default function ReportHistory() {
       offsetRef.current += data.length;
     }
 
-    setLoading(false);
+    setLoading1(false);
     setLoadingMore(false);
   };
 
   useEffect(() => {
     if (idUser) fetchReports(true);
   }, [idUser, statusFilter]);
+
+  useEffect(() => {
+    if(loading) setLoading(false  )
+  })
 
   // Infinite scroll listener
   useEffect(() => {
