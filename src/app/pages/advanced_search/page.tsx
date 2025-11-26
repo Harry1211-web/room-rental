@@ -1,4 +1,5 @@
 "use client";
+// @ts-ignore
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";

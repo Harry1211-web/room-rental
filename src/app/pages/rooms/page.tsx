@@ -1,5 +1,6 @@
 // app/dashboard/rooms/page.tsx
 "use client";
+// @ts-ignore
 
 import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";

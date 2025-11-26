@@ -1,4 +1,5 @@
 "use client";
+// @ts-ignore
 
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";

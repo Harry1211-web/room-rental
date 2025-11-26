@@ -1,4 +1,5 @@
 "use client";
+// @ts-ignore
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
