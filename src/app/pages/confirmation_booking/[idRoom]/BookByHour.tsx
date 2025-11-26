@@ -27,7 +27,7 @@ export default function BookingByHour({ room, bookings }: any) {
 
   const route = useRouter();
   const { setLoading } = useUser();
- 
+
   useEffect(() => {
     if (!checkin || !checkout) return;
 
@@ -82,7 +82,7 @@ export default function BookingByHour({ room, bookings }: any) {
   const isBookingConflict = () => {
     if (!checkin || !checkout) return false;
 
-    return bookedSlots.some((slot) => {
+    return bookedSlots.some((slot: { start: Date; end: Date }) => {
       const start = slot.start || new Date(0); // nếu start null → coi là từ quá khứ
       const end = slot.end || new Date(8640000000000000); // nếu end null → coi là vô hạn
       // Kiểm tra overlap
@@ -92,7 +92,7 @@ export default function BookingByHour({ room, bookings }: any) {
 
   const handleBook = async () => {
     if (!checkin || !checkout) return;
-    setLoading(true)
+    setLoading(true);
     const checkoutToSave =
       overnight && checkout <= checkin
         ? new Date(checkout.setDate(checkout.getDate() + 1))
@@ -112,7 +112,7 @@ export default function BookingByHour({ room, bookings }: any) {
 
     if (error) return alert("Booking failed");
 
-    setLoading(false)
+    setLoading(false);
     toast.success("Booking successful!");
     route.push(`pages/history_booking`);
   };
@@ -122,18 +122,31 @@ export default function BookingByHour({ room, bookings }: any) {
       {/* Select date */}
       <Calendar
         mode="single"
-        selected={date}
+        selected={date || undefined}
+        required={true}
         onSelect={(d) => {
-          if (isBefore(d, startOfToday())) return;
+          if (!d) {
+            setDate(null);
+            setCheckin(null);
+            setCheckout(null);
+            return;
+          }
+          const now = new Date();
+          const today = startOfToday();
+
+          if (isBefore(d, today)) return;
+          if (isSameDay(d, now)) {
+            d.setHours(now.getHours(), now.getMinutes(), 0, 0);
+          }
           setDate(d);
           setCheckin(d);
           const co = new Date(d);
-          co.setHours(d.getHours() + 1 );
+          co.setHours(d.getHours() + 1);
           setCheckout(co);
         }}
-        dayClassName={(d) =>
-          isSameDay(d, startOfToday()) ? "opacity-40 cursor-not-allowed" : ""
-        }
+        disabled={[
+          (date) => isBefore(date, startOfToday()), // disable ngày quá khứ
+        ]}
       />
 
       {/* Toggle overnight */}
@@ -163,7 +176,7 @@ export default function BookingByHour({ room, bookings }: any) {
           value={checkout}
           onChange={handleCheckoutChange}
           bookedSlots={bookedSlots}
-          disable={!date || !checkin}
+          disable={!date || !checkin || isBookingConflict()}
           minTime={overnight && checkin ? checkin : undefined}
         />
       </div>
@@ -183,7 +196,7 @@ export default function BookingByHour({ room, bookings }: any) {
 
       {/* Summary */}
       {checkin && checkout && (
-        <div className="mt-4 p-3 border rounded bg-gray-50">
+        <div className="mt-4 p-3 border rounded bg-gray-50 dark:text-gray-700">
           <p>
             <strong>Check-in:</strong> {format(checkin, "dd/MM/yyyy HH:mm")}
           </p>
@@ -191,7 +204,7 @@ export default function BookingByHour({ room, bookings }: any) {
             <strong>Checkout:</strong> {format(checkout, "dd/MM/yyyy HH:mm")}
           </p>
           <p className="mt-2 font-semibold text-green-600">
-            Total price: {totalPrice}₫
+            Total price: ${totalPrice}
           </p>
         </div>
       )}

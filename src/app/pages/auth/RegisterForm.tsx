@@ -7,6 +7,7 @@ import {
   validateRegisterFields,
   handleStrongPassword,
 } from "./helpers/validation";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 interface RegisterFormProps {
   setMode: (mode: "login" | "register" | "forgot") => void;
@@ -62,7 +63,7 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         .select("id")
         .eq("email", email)
 
-        if (existingEmail.length < 0) {
+        if (existingEmail && existingEmail.length < 0) {
         setFieldErrors((prev) => ({ ...prev, email: "Email already exists" }));
         return;
       }
@@ -72,7 +73,7 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         .select("id")
         .eq("phone_number", phone)
 
-      if (existingPhone?.length < 0) {
+      if (existingPhone && existingPhone?.length < 0) {
         setFieldErrors((prev) => ({ ...prev, phone: "Phone number already exists" }));
         return;
       }
@@ -130,7 +131,7 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
       }
 
       // Sau khi update user metadata
-      await supabase
+      await supabaseAdmin
         .from("users")
         .update({ avatar_url: avatarUrl })
         .eq("id", userId);

@@ -139,7 +139,7 @@ export default function ReviewsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">⭐ Reviews Management</h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">⭐ Reviews Management</h1>
 
       <div className="flex items-center gap-4 mb-4 flex-wrap">
         <input
@@ -147,12 +147,12 @@ export default function ReviewsPage() {
           placeholder="Search by reviewer or room"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="px-3 py-2 border rounded w-64"
+          className="px-3 py-2 border dark:border-gray-700 rounded w-64 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         />
         <select
           value={ratingFilter ?? ""}
           onChange={e => setRatingFilter(e.target.value ? Number(e.target.value) : null)}
-          className="px-3 py-2 border rounded"
+          className="px-3 py-2 border dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         >
           <option value="">All rating</option>
           {[5, 4, 3, 2, 1].map(r => (
@@ -162,7 +162,7 @@ export default function ReviewsPage() {
         <select
           value={ratingSort ?? ""}
           onChange={e => setRatingSort(e.target.value ? (e.target.value as "asc" | "desc") : null)}
-          className="px-3 py-2 border rounded"
+          className="px-3 py-2 border dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         >
           <option value="">No sort</option>
           <option value="desc">Rating high → low</option>
@@ -175,16 +175,17 @@ export default function ReviewsPage() {
           {
             key: "reviewer_id",
             label: "Reviewer",
+            width: "w-[120px]",
             render: r => r.reviewer_name || r.reviewer_email ? (
               <HoverCard content={
-                <div>
-                  <p><strong>Name:</strong> {r.reviewer_name ?? "N/A"}</p>
-                  <p><strong>Email:</strong> {r.reviewer_email ?? "N/A"}</p>
-                  <p><strong>ID:</strong> {r.reviewer_id}</p>
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.reviewer_name ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {r.reviewer_email ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.reviewer_id}</p>
                 </div>
               }>
                 <button
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
                   onClick={() => r.reviewer_id && router.push(`pages/user/${r.reviewer_id}`)}
                 >
                   {r.reviewer_name ?? r.reviewer_email ?? "No name"}
@@ -197,14 +198,14 @@ export default function ReviewsPage() {
             label: "Room",
             render: r => r.room_id ? (
               <HoverCard content={
-                <div>
-                  <p><strong>Room:</strong> {r.room_name ?? "N/A"}</p>
-                  <p><strong>Landlord:</strong> {r.landlord_name ?? "N/A"}</p>
-                  <p><strong>Room ID:</strong> {r.room_id}</p>
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Room:</strong> {r.room_name ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Landlord:</strong> {r.landlord_name ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Room ID:</strong> {r.room_id}</p>
                 </div>
               }>
                 <button
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
                   onClick={() => router.push(`pages/room/${r.room_id}`)}
                 >
                   {r.room_name ?? "No name"} {r.landlord_name ? `(${r.landlord_name})` : ""}
@@ -213,8 +214,19 @@ export default function ReviewsPage() {
             ) : "—",
           },
           { key: "comment", label: "Comment" },
-          { key: "rating", label: "Rating", render: r => r.rating?.toString() ?? "—" },
-          { key: "created_at", label: "Date Sent", render: r => new Date(r.created_at).toLocaleDateString() },
+          { key: "rating", label: "Rating", width: "w-[80px]", render: r => r.rating?.toString() ?? "—" },
+          { 
+            key: "created_at", 
+            label: "Date Sent", 
+            width: "w-[100px]", 
+            render: r => {
+              const date = new Date(r.created_at);
+              const day = String(date.getDate()).padStart(2, '0');
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const year = date.getFullYear();
+              return `${day}/${month}/${year}`;
+            }
+          },
         ]}
         data={filteredReviews}
         onDelete={row => deleteReview(row.id)}

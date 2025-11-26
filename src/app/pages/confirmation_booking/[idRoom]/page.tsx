@@ -10,7 +10,7 @@ import BookingByHour from "./BookByHour";
 
 export default function ConfirmationBooking() {
   const { idRoom } = useParams();
-  const [room, setRoom] = useState<any>(null);
+  const [room, setRoom] = useState<any>(null); 
   const [bookings, setBookings] = useState<any[]>([]);
   const [mode, setMode] = useState<"day" | "hour">("day");
   const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ export default function ConfirmationBooking() {
 
       <h1 className="text-2xl font-bold mb-4">Booking Confirmation</h1>
 
-      <Tabs value={mode} onValueChange={setMode}>
+      <Tabs value={mode} onValueChange={(value) => setMode(value as "day" | "hour")}>
         <TabsList>
           <TabsTrigger value="day">Rent by Day</TabsTrigger>
           <TabsTrigger value="hour">Rent by Hour</TabsTrigger>

@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
 import { toast } from "sonner";
@@ -42,7 +41,7 @@ export default function RoomsDashboardPage() {
   // Form state (used for both create and edit)
   const [form, setForm] = useState({
     id: "",
-    landlord_id: idUser,
+    landlord_id: "",
     title: "",
     description: "",
     city: "",
@@ -50,6 +49,12 @@ export default function RoomsDashboardPage() {
     area: "",
     address: "",
   });
+  useEffect(() => {
+    if (!loading && idUser) {
+      setForm((prev) => ({ ...prev, landlord_id: idUser }));
+    }
+  }, [loading, idUser]);
+
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   console.log(idUser);
   useEffect(() => {
@@ -167,7 +172,7 @@ export default function RoomsDashboardPage() {
   function resetForm() {
     setForm({
       id: "",
-      landlord_id: idUser,
+      landlord_id: idUser || "",
       title: "",
       description: "",
       city: "",
@@ -312,6 +317,17 @@ export default function RoomsDashboardPage() {
       {children}
     </button>
   );
+  const titleInputRef = useRef<HTMLInputElement>(null);
+const [hasFocused, setHasFocused] = useState(false);
+
+useEffect(() => {
+  if (showNewModal && !hasFocused) {
+    titleInputRef.current?.focus();
+    setHasFocused(true);
+  }
+  if (!showNewModal) setHasFocused(false);
+}, [showNewModal, hasFocused]);
+public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts next.config.ts package-lock.json package.json postcss.config.mjs README.md Room_Rental_SRS.docx tailwind.config.ts tempfile.txt testSupabase.js tsconfig.json tsconfig.tsbuildinfo
   if (loading) return <div>Loading...</div>; // hoặc skeleton UI
   // ---------- Sheet component (slide-in from right) ----------
   const Sheet = ({ open, onClose, title, children }: any) => {
@@ -335,6 +351,8 @@ export default function RoomsDashboardPage() {
             open ? "translate-x-0" : "translate-x-full"
           } transition-transform`}
           style={{ transitionDuration: "220ms" }}
+          onClick={(e) => e.stopPropagation()} // ← thêm dòng này
+
         >
           <div className="p-6">
             <div className="flex items-start justify-between">
@@ -431,7 +449,9 @@ export default function RoomsDashboardPage() {
             className="w-full p-2 border rounded"
             placeholder="Title"
             value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, title: e.target.value }))
+            }
           />
           <textarea
             className="w-full p-2 border rounded"
@@ -483,12 +503,15 @@ export default function RoomsDashboardPage() {
           </div>
 
           <div className="flex gap-2">
-            <Btn onClick={createRoom}>Create</Btn>
+            <Btn onClick={createRoom} className="bg-green-100">
+              Create
+            </Btn>
             <Btn
               onClick={() => {
                 resetForm();
                 setShowNewModal(false);
               }}
+              className="bg-red-100"
             >
               Cancel
             </Btn>

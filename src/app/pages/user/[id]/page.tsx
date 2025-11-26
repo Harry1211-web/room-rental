@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import { format } from "date-fns";
+import { useUser } from "@/app/context/Usercontext";
 
 // ==================== TYPES ====================
 interface UserProfile {
   id: string;
   name: string;
   email: string;
+  phone_number: string;
   avatar_url?: string | null;
-  bio?: string | null;
   created_at?: string;
 }
 
@@ -41,19 +43,26 @@ interface Room {
 export default function UserPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { setLoading, logout } = useUser();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [reviews, setReviews] = useState<ReviewWithRoom[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading1] = useState(true);
 
   const [filterRating, setFilterRating] = useState(0);
   const [sortOrder, setSortOrder] = useState("newest");
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editBio, setEditBio] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    setLoading(false);
+  });
 
   // ==================== FETCH CURRENT USER ====================
   useEffect(() => {
@@ -76,7 +85,7 @@ export default function UserPage() {
     if (!id) return;
 
     const fetchUser = async () => {
-      setLoading(true);
+      setLoading1(true);
       try {
         const { data: userData, error: userError } = await supabase
           .from("users")
@@ -87,14 +96,16 @@ export default function UserPage() {
 
         const { data: reviewsData, error: reviewsError } = await supabase
           .from("reviews")
-          .select(`
+          .select(
+            `
             id,
             room_id,
             rating,
             comment,
             created_at,
             rooms(id, title, city, price)
-          `)
+          `
+          )
           .eq("reviewer_id", id)
           .order("created_at", { ascending: false });
         if (reviewsError) throw reviewsError;
@@ -107,14 +118,15 @@ export default function UserPage() {
         if (roomsError) throw roomsError;
 
         setUser(userData);
-        setReviews(reviewsData || []);
-        setRooms(roomsData || []);
-        setEditName(userData.name || "");
-        setEditBio(userData.bio || "");
+        setReviews((reviewsData as unknown as ReviewWithRoom[]) || []);
+        setRooms((roomsData as unknown as Room[]) || []);
+        setEditName(userData?.name || "");
+        setEditEmail(userData?.email || "");
+        setEditPhone(userData?.phone_number || "");
       } catch (err) {
         console.error("Error fetching user data:", err);
       } finally {
-        setLoading(false);
+        setLoading1(false);
       }
     };
 
@@ -129,9 +141,13 @@ export default function UserPage() {
   const sortedReviews = [...filteredReviews].sort((a, b) => {
     switch (sortOrder) {
       case "newest":
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       case "oldest":
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        return (
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
       case "high":
         return b.rating - a.rating;
       case "low":
@@ -151,7 +167,7 @@ export default function UserPage() {
     try {
       const { data, error } = await supabase
         .from("users")
-        .update({ name: editName, bio: editBio })
+        .update({ name: editName, email: editEmail, phone_number: editPhone })
         .eq("id", user.id)
         .select()
         .single();
@@ -160,6 +176,89 @@ export default function UserPage() {
       setEditing(false);
     } catch (err) {
       console.error("Error updating profile:", err);
+    }
+  };
+
+  //================Delete Profile=======================
+  const handleDeleteProfile = () => {
+    if (!user) return;
+    setOpenConfirmDelete(true);
+  };
+
+  const confirmDelete = async () => {
+    setOpenConfirmDelete(false);
+    if (!user) return;
+
+    try {
+      setLoading(true); // bật loading global từ UserContext
+
+      // 1️⃣ Check if user is landlord (has rooms)
+      const { data: roomsData, error: roomsError } = await supabase
+        .from("rooms")
+        .select("id")
+        .eq("landlord_id", user.id);
+      if (roomsError) throw roomsError;
+
+      // 2️⃣ Delete room images & verifications
+      if (roomsData?.length) {
+        for (const room of roomsData) {
+          await fetch("/api/storage/room_images", {
+            method: "DELETE",
+            body: (() => {
+              const formData = new FormData();
+              formData.append("action", "delete-all");
+              formData.append("idRoom", room.id);
+              return formData;
+            })(),
+          });
+
+          const { data: verifiData } = await supabase
+            .from("verifications")
+            .select("id")
+            .eq("room_id", room.id);
+
+          if (verifiData?.length) {
+            for (const veri of verifiData) {
+              await fetch("/api/storage/verification", {
+                method: "DELETE",
+                body: (() => {
+                  const formData = new FormData();
+                  formData.append("action", "delete-all");
+                  formData.append("idRoom", veri.id);
+                  return formData;
+                })(),
+              });
+            }
+          }
+        }
+      }
+
+      // 3️⃣ Delete avatar
+      if (user.avatar_url) {
+        await fetch("/api/storage/avatar", {
+          method: "DELETE",
+          body: (() => {
+            const formData = new FormData();
+            formData.append("userId", user.id);
+            return formData;
+          })(),
+        });
+      }
+
+      // 4️⃣ Delete user
+      const { error: deleteUserError } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", user.id);
+      if (deleteUserError) throw deleteUserError;
+
+      alert("User and all related data deleted.");
+      logout(); // từ UserContext
+    } catch (err) {
+      console.error("Delete user error:", err);
+      alert("Failed to delete user.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -177,6 +276,7 @@ export default function UserPage() {
         <div className="text-center sm:text-left w-full max-w-md">
           {isOwner && editing ? (
             <div className="space-y-2">
+              <label htmlFor="">Name: </label>
               <input
                 type="text"
                 value={editName}
@@ -184,11 +284,21 @@ export default function UserPage() {
                 className="border rounded px-3 py-1 w-full"
                 placeholder="Name"
               />
-              <textarea
-                value={editBio}
-                onChange={(e) => setEditBio(e.target.value)}
+              <label htmlFor="">Email: </label>
+              <input
+                type="text"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
                 className="border rounded px-3 py-2 w-full"
-                placeholder="Bio"
+                placeholder="Email"
+              />
+              <label htmlFor="">Phone number: </label>
+              <input
+                type="text"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                className="border rounded px-3 py-2 w-full"
+                placeholder="Phone Number"
               />
               <div className="flex gap-3">
                 <button
@@ -208,18 +318,36 @@ export default function UserPage() {
           ) : (
             <>
               <h1 className="text-4xl font-bold">{user.name}</h1>
-              <p className="text-gray-600 mt-1">{user.email}</p>
-              {user.bio && <p className="mt-2 text-gray-700">{user.bio}</p>}
+              <p className="text-gray-600 mt-1 dark:text-gray-300">
+                Email: {user.email}
+              </p>
+              <p className="text-gray-600 mt-1 dark:text-gray-300">
+                Phone number: {user.phone_number}
+              </p>
               <p className="mt-1 text-gray-400 text-sm">
-                Joined {new Date(user.created_at || "").toLocaleDateString()}
+                Joined {format(new Date(user.created_at || ""), "dd/MM/yyyy")}
               </p>
               {isOwner && (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="mt-2 text-blue-600 hover:underline"
-                >
-                  Edit Profile
-                </button>
+                <>
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="mt-2 text-blue-600 hover:underline"
+                  >
+                    Edit Profile
+                  </button>
+                  <ConfirmDeleteModal
+                    open={openConfirmDelete}
+                    onCancel={() => setOpenConfirmDelete(false)}
+                    onConfirm={confirmDelete}
+                  />
+
+                  <button
+                    onClick={handleDeleteProfile}
+                    className="mt-2 flex text-red-600 hover:underline"
+                  >
+                    Delete Profile
+                  </button>
+                </>
               )}
             </>
           )}
@@ -229,7 +357,9 @@ export default function UserPage() {
       {/* ==================== ROOMS ==================== */}
       {rooms.length > 0 && (
         <div>
-          <h2 className="text-2xl font-semibold mb-4">🏠 Rooms listed by {user.name}</h2>
+          <h2 className="text-2xl font-semibold mb-4">
+            🏠 Rooms listed by {user.name}
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {rooms.map((room) => (
               <div
@@ -248,8 +378,12 @@ export default function UserPage() {
                 )}
                 <div className="p-4">
                   <h3 className="font-semibold text-lg">{room.title}</h3>
-                  <p className="text-gray-500">{room.city}</p>
-                  <p className="mt-1 font-bold">{room.price.toLocaleString()} ₫</p>
+                  <p className="text-gray-500 dark:text-gray-300">
+                    {room.city}
+                  </p>
+                  <p className="mt-1 font-bold">
+                    ${room.price.toLocaleString()} / night
+                  </p>
                 </div>
               </div>
             ))}
@@ -259,7 +393,9 @@ export default function UserPage() {
 
       {/* ==================== REVIEWS ==================== */}
       <div>
-        <h2 className="text-2xl font-semibold mb-4">⭐ Reviews by {user.name}</h2>
+        <h2 className="text-2xl font-semibold mb-4">
+          ⭐ Reviews by {user.name}
+        </h2>
 
         {/* Filter & sort */}
         <div className="flex flex-wrap gap-3 mb-4 items-center">
@@ -270,7 +406,13 @@ export default function UserPage() {
           >
             <option value={0}>All ratings</option>
             {[5, 4, 3, 2, 1].map((star) => (
-              <option key={star} value={star}>{star} stars</option>
+              <option
+                className="text-gray-700 dark:text-gray-300"
+                key={star}
+                value={star}
+              >
+                {star} stars
+              </option>
             ))}
           </select>
 
@@ -279,10 +421,18 @@ export default function UserPage() {
             onChange={(e) => setSortOrder(e.target.value)}
             className="border rounded px-3 py-1"
           >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="high">Highest rating</option>
-            <option value="low">Lowest rating</option>
+            <option className="text-gray-700 dark:text-gray-300" value="newest">
+              Newest
+            </option>
+            <option className="text-gray-700 dark:text-gray-300" value="oldest">
+              Oldest
+            </option>
+            <option className="text-gray-700 dark:text-gray-300" value="high">
+              Highest rating
+            </option>
+            <option className="text-gray-700 dark:text-gray-300" value="low">
+              Lowest rating
+            </option>
           </select>
         </div>
 
@@ -293,17 +443,24 @@ export default function UserPage() {
               <div key={review.id} className="border p-4 rounded-lg shadow-sm">
                 <h3
                   className="font-semibold text-lg text-blue-600 hover:underline cursor-pointer"
-                  onClick={() => review.rooms && router.push(`/room/${review.rooms.id}`)}
+                  onClick={() =>
+                    review.rooms && router.push(`/room/${review.rooms.id}`)
+                  }
                 >
                   {review.rooms?.title || "Unknown room"}
                 </h3>
-                <p className="text-gray-500 text-sm">
-                  {review.rooms?.city} | {review.rooms?.price?.toLocaleString()} ₫
+                <p className="text-gray-500 dark:text-gray-300 text-sm">
+                  {review.rooms?.city} | $
+                  {review.rooms?.price?.toLocaleString()}
                 </p>
-                <p className="text-yellow-500 font-semibold mt-1">⭐ {review.rating}/5</p>
-                <p className="mt-2 text-gray-700">{review.comment}</p>
+                <p className="text-yellow-500 font-semibold mt-1">
+                  ⭐ {review.rating}/5
+                </p>
+                <p className="mt-2 text-gray-700 dark:text-gray-300">
+                  {review.comment}
+                </p>
                 <p className="text-sm text-gray-400">
-                  {new Date(review.created_at).toLocaleDateString()}
+                  {format(new Date(review.created_at), "dd/MM/yyyy")}
                 </p>
               </div>
             ))}
@@ -313,5 +470,37 @@ export default function UserPage() {
         )}
       </div>
     </div>
+  );
+}
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+
+export function ConfirmDeleteModal({ open, onConfirm, onCancel }) {
+  return (
+    <Dialog open={open} onOpenChange={onCancel}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Are you sure?</DialogTitle>
+        </DialogHeader>
+
+        <p>This action cannot be undone.</p>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

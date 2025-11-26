@@ -86,18 +86,18 @@ export default function UsersPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">👥 Users management</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">👥 Users management</h1>
 
       <div className="flex flex-wrap gap-3 items-center">
         <input
           type="text"
           placeholder="🔍 Search by name, email, phone or id"
-          className="border p-2 rounded w-128"
+          className="border dark:border-gray-700 p-2 rounded w-full sm:w-96 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="border p-2 rounded"
+          className="border dark:border-gray-700 p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as RoleType | "all")}
         >
@@ -107,7 +107,7 @@ export default function UsersPage() {
           <option value="landlord">Landlord</option>
         </select>
         <select
-          className="border p-2 rounded"
+          className="border dark:border-gray-700 p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusType | "all")}
         >
@@ -120,32 +120,46 @@ export default function UsersPage() {
 
       <DataTable<User>
         columns={[
-          { key: "id", label: "ID" },
+          { 
+            key: "id", 
+            label: "ID",
+            render: (row) => (
+              <HoverCard content={
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Full ID:</strong> {row.id}</p>
+                </div>
+              }>
+                <span className="cursor-help" title={row.id}>
+                  {row.id.substring(0, 12)}...
+                </span>
+              </HoverCard>
+            )
+          },
           { 
             key: "name", 
             label: "Name",
             render: (row) => (
               <HoverCard content={
-                <div className="space-y-1 text-sm">
-                  <p><strong>Email:</strong> {row.email}</p>
-                  {row.phone_number && <p><strong>Phone:</strong> {row.phone_number}</p>}
-                  <p><strong>Role:</strong> {row.role}</p>
-                  <p><strong>Status:</strong> {row.status}</p>
-                  <p><strong>Created:</strong> {new Date(row.created_at).toLocaleString()}</p>
+                <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {row.email}</p>
+                  {row.phone_number && <p><strong className="text-gray-900 dark:text-gray-100">Phone:</strong> {row.phone_number}</p>}
+                  <p><strong className="text-gray-900 dark:text-gray-100">Role:</strong> {row.role}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Status:</strong> {row.status}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Created:</strong> {new Date(row.created_at).toLocaleString()}</p>
                 </div>
               }>
-                <button className="text-blue-600 hover:underline font-medium" onClick={() => router.push(`/pages/user/${row.id}`)}>
+                <button className="text-blue-600 dark:text-blue-400 hover:underline font-medium" onClick={() => router.push(`/pages/user/${row.id}`)}>
                   {row.name ?? "—"}
                 </button>
               </HoverCard>
             )
           },
-          { key: "email", label: "Email" },
-          { key: "phone_number", label: "Phone" },
-          { key: "role", label: "Role" },
-          { key: "status", label: "Status" },
+          { key: "email", label: "Email", width: "w-[250px]" },
+          { key: "phone_number", label: "Phone", width: "w-[120px]" },
+          { key: "role", label: "Role", width: "w-[80px]" },
+          { key: "status", label: "Status", width: "w-[90px]" },
           { 
-            key: "actions", 
+            key: undefined, 
             label: "Actions",
             render: (row) => (
               <div className="flex gap-2">
@@ -166,8 +180,6 @@ export default function UsersPage() {
           },
         ]}
         data={filtered}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
-        rowClassName="hover:bg-gray-50 transition-colors duration-150"
       />
 
 

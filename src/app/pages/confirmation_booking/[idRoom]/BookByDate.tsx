@@ -36,7 +36,7 @@ export default function BookingByDay({ room, bookings }: any) {
   // Check if a day is fully booked
   const isDayFullyBooked = (date: Date) =>
     bookedSlots.some(
-      (slot) => isSameDay(slot.start, date) || isSameDay(slot.end, date)
+      (slot: { start: Date; end: Date }) => isSameDay(slot.start, date) || isSameDay(slot.end, date)
     );
 
   // Reset checkout when checkin changes
@@ -59,7 +59,7 @@ export default function BookingByDay({ room, bookings }: any) {
     newCheckout.setHours(newCheckout.getHours() + 1);
 
     return !bookedSlots.some(
-      (slot) => newCheckout > slot.start && checkout < slot.end
+      (slot: { start: Date; end: Date }) => newCheckout > slot.start && checkout < slot.end
     );
   };
 
@@ -67,7 +67,7 @@ export default function BookingByDay({ room, bookings }: any) {
   const totalHours = (() => {
     if (!checkin || !checkout) return 0;
 
-    let diffMinutes = differenceInMinutes(checkout, checkin);
+    const diffMinutes = differenceInMinutes(checkout, checkin);
     let hours = diffMinutes / 60;
 
     if (Math.round(hours) === 24) hours -= 1;
@@ -93,7 +93,7 @@ export default function BookingByDay({ room, bookings }: any) {
     const checkoutWithExtra = new Date(checkout);
     checkoutWithExtra.setHours(checkoutWithExtra.getHours() + extraHours);
 
-    const { data, error } = await supabase.from("bookings").insert({
+    const { error } = await supabase.from("bookings").insert({
       room_id: room.id,
       tenant_id: idUser,
       start_time: checkin.toISOString(),
@@ -110,10 +110,9 @@ export default function BookingByDay({ room, bookings }: any) {
   const isBookingConflict = () => {
     if (!checkin || !checkout) return false;
 
-    return bookedSlots.some((slot) => {
-      const start = slot.start || new Date(0); // nếu start null → coi là từ quá khứ
-      const end = slot.end || new Date(8640000000000000); // nếu end null → coi là vô hạn
-      // Kiểm tra overlap
+    return bookedSlots.some((slot: { start: Date; end: Date }) => {
+      const start = slot.start || new Date(0);
+      const end = slot.end || new Date(8640000000000000);
       return checkin < end && checkout > start;
     });
   };
@@ -126,33 +125,27 @@ export default function BookingByDay({ room, bookings }: any) {
           <p className="text-sm font-medium mb-2">Select check-in date</p>
           <Calendar
             mode="single"
-            selected={checkin}
+            selected={checkin || undefined} // Fixed: null → undefined
+            required={true}
             onSelect={(date) => {
+              if (!date) {
+                setCheckin(null);
+                return;
+              }
               const now = new Date();
               const today = startOfToday();
 
-              // Nếu chọn ngày trong quá khứ -> bỏ qua
               if (isBefore(date, today)) return;
 
-              // Nếu chọn ngày hôm nay -> gán giờ bằng giờ hiện tại
               if (isSameDay(date, now)) {
                 date.setHours(now.getHours(), now.getMinutes(), 0, 0);
               }
 
               setCheckin(new Date(date));
             }}
-            dayClassName={(date) => {
-              if (isBefore(date, startOfToday()))
-                return "opacity-40 cursor-not-allowed";
-              if (
-                bookedSlots.some(
-                  (slot) =>
-                    isSameDay(slot.start, date) || isSameDay(slot.end, date)
-                )
-              )
-                return "bg-red-200 text-red-700";
-              return "";
-            }}
+            disabled={[
+              (date) => isBefore(date, startOfToday()),
+            ]}
           />
         </div>
 
@@ -160,15 +153,18 @@ export default function BookingByDay({ room, bookings }: any) {
           <p className="text-sm font-medium mb-2">Select check-out date</p>
           <Calendar
             mode="single"
-            selected={checkout}
+            selected={checkout || undefined} // Fixed: null → undefined
+            required={true}
             onSelect={(date: Date) => {
               if (checkin && isBefore(date, checkin)) return;
               setCheckout(date);
             }}
-            month={checkin || undefined} // show month of check-in
-            disabledDate={(date) =>
-              isDayFullyBooked(date) || (checkin && isBefore(date, checkin))
-            }
+            month={checkin || undefined}
+            disabled={[
+              (date) => isBefore(date, checkin || startOfToday()),
+              (date) => isDayFullyBooked(date),
+              (date) => checkin && isSameDay(date, checkin),  
+            ]}
           />
         </div>
       </div>
@@ -196,11 +192,11 @@ export default function BookingByDay({ room, bookings }: any) {
               : undefined
           }
           bookedSlots={bookedSlots}
-          disable={!checkin}
+          disable={!checkin || isBookingConflict()}
         />
       </div>
 
-      <p>(Extra 1-hour price: {pricePerHour}₫)</p>
+      <p>(Extra 1-hour price: ${pricePerHour})</p>
 
       <div className="flex gap-2 mt-3">
         <Button
@@ -228,7 +224,7 @@ export default function BookingByDay({ room, bookings }: any) {
 
       {/* Summary */}
       {checkin && checkout && (
-        <div className="mt-4 p-3 border rounded bg-gray-50">
+        <div className="mt-4 p-3 border rounded bg-gray-50 dark:text-gray-700">
           <p>
             <strong>Check-in:</strong> {format(checkin, "dd/MM/yyyy HH:mm")}
           </p>
@@ -248,7 +244,7 @@ export default function BookingByDay({ room, bookings }: any) {
             </p>
           )}
           <p className="mt-2 font-semibold text-green-600">
-            Total price: {totalPrice}₫
+            Total price: ${totalPrice}
           </p>
         </div>
       )}
