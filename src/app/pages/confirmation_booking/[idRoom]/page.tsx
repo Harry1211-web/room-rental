@@ -1,5 +1,5 @@
 "use client";
-// @ts-ignore
+// @ts-expect-error
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";

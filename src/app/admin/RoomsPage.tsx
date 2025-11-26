@@ -1,5 +1,5 @@
 "use client";
-// @ts-ignore
+// @ts-expect-error
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";

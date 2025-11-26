@@ -1,5 +1,5 @@
 "use client";
-// @ts-ignore
+// @ts-expect-error
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
