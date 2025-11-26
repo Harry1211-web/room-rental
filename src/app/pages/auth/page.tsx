@@ -17,8 +17,6 @@ function AuthContent() {
 
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  useEffect(() => {setLoading(false)})
-
   useEffect(() => {
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)"

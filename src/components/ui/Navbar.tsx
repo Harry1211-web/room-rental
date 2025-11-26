@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -141,7 +140,8 @@ export default function Navbar() {
                   >
                     <Image
                       src={
-                        localStorage.getItem("avatar_url") || "/avatar_default.jpg"
+                        localStorage.getItem("avatar_url") ||
+                        "/avatar_default.jpg"
                       }
                       alt="Avatar"
                       width={40}

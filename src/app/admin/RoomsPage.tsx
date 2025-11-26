@@ -14,13 +14,6 @@ interface Tag {
   amount: number;
 }
 
-interface Tag {
-  id: string;
-  value: string;
-  value_type: string;
-  amount: number;
-}
-
 interface Room {
   id: string;
   title: string;
@@ -541,9 +534,6 @@ function TagManager({
   onAddTag: () => void;
 }) {
   const [searchTag, setSearchTag] = useState("");
-
-  // Use the same getTagKey function for consistency
-  const getTagKey = (tag: Tag) => `${tag.value}_${tag.amount}`;
 
   const filteredTags = tags.filter((t) =>
     t.value.toLowerCase().includes(searchTag.toLowerCase()) ||
