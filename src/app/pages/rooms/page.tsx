@@ -122,7 +122,7 @@ export default function RoomsDashboardPage() {
       description: room.description || "",
       city: room.city || "",
       price: room.price?.toString() || "",
-      landlord_id: idUser,
+      landlord_id: idUser!,
       address: room.address,
       area: room.area,
     });
