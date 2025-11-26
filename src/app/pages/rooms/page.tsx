@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 /**
  * Single-file dashboard for Rooms + Tags + Images + Bookings
@@ -23,6 +24,12 @@ type Booking = any;
 type RoomImage = any;
 type Verification = any
 
+interface Tenant {
+  name?: string, 
+  email?: string,
+  phone?: string
+}
+
 export default function RoomsDashboardPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -32,6 +39,7 @@ export default function RoomsDashboardPage() {
   const [verification, setVerification] = useState<Verification[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { idUser, loading, setLoading } = useUser();
+  const [ tenant, setTenant ] = useState<Tenant | null>(null)
 
   // modal / sheet visibility
   const [showNewModal, setShowNewModal] = useState(false);
@@ -65,6 +73,20 @@ export default function RoomsDashboardPage() {
   async function loadAll() {
     await Promise.all([fetchRooms(), fetchTags()]);
   }
+
+
+  //-----------show tenant info----
+  const handleShowTenant = async (tenant_id: string) => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("name, email, phone_number")
+      .eq("id", tenant_id)
+      .single();
+
+    if (error) console.error("Error fetching landlord:", error);
+    else setTenant(data);
+  };
+
 
   // ---------- ROOMS ----------
   async function fetchRooms() {
@@ -372,41 +394,61 @@ export default function RoomsDashboardPage() {
   );
   if (loading) return <div>Loading...</div>; // hoặc skeleton UI
   // ---------- Sheet component (slide-in from right) ----------
-  const Sheet = ({ open, onClose, title, children }: any) => {
-    return (
-      <>
-        {/* overlay */}
-        <div
-          className={`fixed inset-0 z-40 transition-opacity ${
-            open ? "opacity-100 visible" : "opacity-0 invisible"
-          }`}
-          aria-hidden
-          onClick={onClose}
-          style={{
-            transitionDuration: "200ms",
-            backgroundColor: "rgba(0,0,0,0.35)",
-          }}
-        />
-        {/* panel */}
-        <aside
-          className={`fixed top-0 right-0 z-50 h-full w-full max-w-[720px] transform bg-white shadow-2xl overflow-auto ${
-            open ? "translate-x-0" : "translate-x-full"
-          } transition-transform`}
-          style={{ transitionDuration: "220ms" }}
-        >
-          <div className="p-6">
-            <div className="flex items-start justify-between">
-              <h3 className="text-lg font-semibold">{title}</h3>
-              <button className="text-gray-500" onClick={onClose}>
-                ✕
-              </button>
-            </div>
-            <div className="mt-4">{children}</div>
+ const Sheet = ({ open, onClose, title, children }: any) => {
+  const [isVisible, setIsVisible] = useState(open);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setIsVisible(true); // mount panel
+      // trigger animation on next frame
+      const id = requestAnimationFrame(() => setIsAnimating(true));
+      return () => cancelAnimationFrame(id);
+    } else {
+      setIsAnimating(false); // trigger slide-out
+    }
+  }, [open]);
+
+  function handleTransitionEnd() {
+    if (!isAnimating) setIsVisible(false); // unmount after slide-out
+  }
+
+  if (!isVisible) return null;
+
+  return (
+    <>
+      {/* overlay */}
+      <div
+        className={`fixed inset-0 z-40 transition-opacity ${
+          isAnimating ? "opacity-100" : "opacity-0"
+        }`}
+        onClick={onClose}
+        style={{ transitionDuration: "500ms", backgroundColor: "rgba(0,0,0,0.35)" }}
+      />
+
+      {/* panel */}
+      <aside
+        ref={panelRef}
+        className={`fixed top-0 right-0 z-50 h-full w-full max-w-[720px] bg-white shadow-2xl overflow-auto
+          transform transition-transform duration-300
+          ${isAnimating ? "translate-x-0" : "translate-x-full"}
+        `}
+        onTransitionEnd={handleTransitionEnd}
+      >
+        <div className="p-6">
+          <div className="flex items-start justify-between">
+            <h3 className="text-lg font-semibold">{title}</h3>
+            <button className="text-gray-500" onClick={onClose}>✕</button>
           </div>
-        </aside>
-      </>
-    );
-  };
+          <div className="mt-4">{children}</div>
+        </div>
+      </aside>
+    </>
+  );
+};
+
+
 
   // ---------- RENDER: main list + sheets ----------
   return (
@@ -701,22 +743,38 @@ export default function RoomsDashboardPage() {
           }}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {verification.map((v: Verification) => (
-            <div key={v.id} className="border rounded p-2 dark:border-b-red-300">
-              <img
-                src={v.proof}
-                alt="room"
-                className="w-full h-32 object-cover rounded"
-              />
-              <div className="flex justify-between mt-2">
-                <span className="text-xs text-gray-600">
-                  #{String(v.id).slice(0, 6)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+  {verification.map((v: Verification) => (
+    <div
+      key={v.id}
+      className={`border rounded p-2 transition-all 
+        ${v.verified 
+          ? "bg-green-100 border-green-400 dark:bg-green-800 dark:border-green-500" 
+          : "bg-red-100 border-red-400 dark:bg-red-800 dark:border-red-500"
+        }`}
+    >
+      <img
+        src={v.proof}
+        alt="room proof"
+        className="w-full h-32 object-cover rounded"
+      />
+
+      <div className="flex justify-between items-center mt-2">
+        <span className="text-xs text-gray-600 dark:text-gray-300">
+          #{String(v.id).slice(0, 6)}
+        </span>
+
+        {/* Icon theo trạng thái */}
+        {v.verified ? (
+          <span className="text-green-600 dark:text-green-300 text-xl">✔</span>
+        ) : (
+          <span className="text-red-600 dark:text-red-300 text-xl">✘</span>
+        )}
+      </div>
+    </div>
+  ))}
+</div>
+
       </Sheet>
 
       {/* ---------- Tags Sheet ---------- */}
@@ -795,7 +853,25 @@ export default function RoomsDashboardPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button
+                  
+                  {b.status == "confirmed" || b.status == "cancelled" ? (
+                    <>
+                    <button
+                    className={`${b.status == "confirmed" ? "px-3 py-4 bg-green-100 rounded" : "px-3 py-4 bg-red-100 rounded"}`}
+                  >
+                    {b.status == "confirmed" ? "Confirmed" : "Refused"}
+                  </button>
+
+                  {b.status == "confirmed" && (<button
+                    className="px-3 py-4 bg-gray-100 rounded"
+                    onClick={() => handleShowTenant(b.tenant_id)}
+                  >
+                    Information of tenant
+                  </button>)}
+                  </>
+                  ) : (
+                    <>
+                    <button
                     className="px-3 py-4 bg-green-100 rounded"
                     onClick={() => updateBookingStatus(b.id, "confirmed")}
                   >
@@ -807,12 +883,36 @@ export default function RoomsDashboardPage() {
                   >
                     Refuse
                   </button>
+                  </>
+                  )}
+                  
                 </div>
               </div>
             </div>
           ))}
         </div>
       </Sheet>
+      {/* Tenant modal */}
+      {tenant && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white p-6 rounded-xl shadow-xl w-80 text-center animate-fadeIn">
+            <h3 className="text-xl font-bold mb-3">Landlord Information</h3>
+            <p>
+              <strong>Name:</strong> {tenant.name}
+            </p>
+            <p>
+              <strong>Email:</strong> {tenant.email || "Not available"}
+            </p>
+            <p>
+              <strong>Phone:</strong>{" "}
+              {tenant.phone || "Not available"}
+            </p>
+            <Button onClick={() => setTenant(null)} className="mt-4 w-full">
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
