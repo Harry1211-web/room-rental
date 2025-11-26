@@ -40,6 +40,7 @@ const config: Config = {
           "100%": { transform: "translateX(100%)" },
         },
       },
+
       animation: {
         "slide-in-from-bottom": "slide-in-from-bottom 0.3s ease-out",
         "slide-out-to-bottom": "slide-out-to-bottom 0.3s ease-in",

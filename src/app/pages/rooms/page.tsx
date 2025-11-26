@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 /**
  * Single-file dashboard for Rooms + Tags + Images + Bookings
@@ -20,16 +21,24 @@ type Room = any;
 type Tag = any;
 type Booking = any;
 type RoomImage = any;
+type Verification = any
+
+interface Tenant {
+  name?: string, 
+  email?: string,
+  phone?: string
+}
 
 export default function RoomsDashboardPage() {
-  const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [roomImages, setRoomImages] = useState<RoomImage[]>([]);
+  const [verification, setVerification] = useState<Verification[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { idUser, loading } = useUser();
+  const { idUser, loading, setLoading } = useUser();
+  const [ tenant, setTenant ] = useState<Tenant | null>(null)
 
   // modal / sheet visibility
   const [showNewModal, setShowNewModal] = useState(false);
@@ -37,6 +46,7 @@ export default function RoomsDashboardPage() {
   const [showImagesModal, setShowImagesModal] = useState(false);
   const [showTagsModal, setShowTagsModal] = useState(false);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   // Form state (used for both create and edit)
   const [form, setForm] = useState({
@@ -56,7 +66,9 @@ export default function RoomsDashboardPage() {
   }, [loading, idUser]);
 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  console.log(idUser);
+
+  useEffect(() => {setLoading(false)})
+
   useEffect(() => {
     if (loading) return;
     loadAll();
@@ -66,6 +78,20 @@ export default function RoomsDashboardPage() {
   async function loadAll() {
     await Promise.all([fetchRooms(), fetchTags()]);
   }
+
+
+  //-----------show tenant info----
+  const handleShowTenant = async (tenant_id: string) => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("name, email, phone_number")
+      .eq("id", tenant_id)
+      .single();
+
+    if (error) console.error("Error fetching landlord:", error);
+    else setTenant(data);
+  };
+
 
   // ---------- ROOMS ----------
   async function fetchRooms() {
@@ -245,7 +271,7 @@ export default function RoomsDashboardPage() {
   }
 
   async function deleteImage(imgId: string) {
-    if (!confirm("Xóa ảnh này?")) return;
+    if (!confirm("Delete this picture?")) return;
     const formData = new FormData();
     formData.append("action", "delete-one");
     formData.append("idRoom", selectedRoom.id);
@@ -294,6 +320,61 @@ export default function RoomsDashboardPage() {
 
       toast.success(`${status} booking`);
     }
+  }
+
+  //-----------Verification----------
+  async function openVerification(room: Room) {
+    setSelectedRoom(room);
+    const { data } = await supabase
+      .from("verifications")
+      .select("*")
+      .eq("room_id", room.id)
+    setVerification(data || []);
+    setShowVerificationModal(true);
+  }
+
+  async function uploadVerification(file?: File) {
+    if (!selectedRoom) return;
+    if (!file) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("verifications")
+      .insert([
+        {
+          verified: false,
+          type: "certificate",
+          room_id: selectedRoom.id,
+          landlord_id: idUser
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("❌ Error creating report:", error);
+      alert("❌ Failed to submit the report!");
+      setLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("verificationId", data.id);
+
+    const res = await fetch("/api/verification", {
+      method: "POST",
+      body: formData,
+    });
+
+    const dataRespone = await res.json();
+    await supabase
+      .from("verifications")
+      .update({proof: dataRespone.url})
+      .eq("id", data.id);
+    setVerification(await openVerification(selectedRoom));
+    await fetchRooms();
   }
 
   // ---------- UI helpers ----------
@@ -363,17 +444,21 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
             </div>
             <div className="mt-4">{children}</div>
           </div>
-        </aside>
-      </>
-    );
-  };
+          <div className="mt-4">{children}</div>
+        </div>
+      </aside>
+    </>
+  );
+};
+
+
 
   // ---------- RENDER: main list + sheets ----------
   return (
     <div className="p-6 pt-32">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold">Rooms Management</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 dark:text-gray-700">
           <Btn
             onClick={() => {
               resetForm();
@@ -406,10 +491,10 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
             </div>
 
             <h2 className="text-lg font-medium">{r.title}</h2>
-            <p className="text-sm text-muted-foreground">
-              {r.city} · {r.price} vnđ
+            <p className="text-sm text-muted-foreground dark:text-gray-300">
+              {r.city} · ${r.price}
             </p>
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap gap-2 mt-2 dark:text-gray-700">
               {(r.rooms_tags || []).map((rt: any) => (
                 <span
                   key={rt.tag_id}
@@ -420,12 +505,13 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
               ))}
             </div>
 
-            <div className="flex gap-2 mt-3">
+            <div className="flex flex-wrap gap-2 mt-3 dark:text-gray-700">
               <Btn onClick={() => startEdit(r)}>Edit</Btn>
               <Btn onClick={() => openImages(r)}>Images</Btn>
               <Btn onClick={() => openBookings(r)}>Show Bookings</Btn>
+              <Btn onClick={() => openVerification(r)}>Verification</Btn>
               <Btn
-                className="bg-red-100 border-red-300"
+                className="bg-red-100 border-red-300 dark:bg-red-500 dark:border-b-red-800"
                 onClick={() => deleteRoom(r.id)}
               >
                 Delete
@@ -444,7 +530,7 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
         }}
         title="Create New Room"
       >
-        <div className="space-y-2">
+        <div className="space-y-2 dark:text-gray-700">
           <input
             className="w-full p-2 border rounded"
             placeholder="Title"
@@ -528,7 +614,7 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
         }}
         title="Edit Room"
       >
-        <div className="space-y-2">
+        <div className="space-y-2 dark:text-gray-700">
           <input
             className="w-full p-2 border rounded"
             placeholder="Title"
@@ -558,7 +644,8 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
             <div className="mb-1 text-sm">Tags (click to toggle)</div>
             <div className="flex flex-wrap gap-2">
               {tags.map((t: Tag) => (
-                <button
+                t.name != "verified" && (
+                  <button
                   key={t.tag_id}
                   onClick={() => toggleTagSelection(t.tag_id)}
                   className={`px-2 py-1 rounded text-sm border ${
@@ -569,6 +656,7 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
                 >
                   {t.name}
                 </button>
+                )
               ))}
             </div>
           </div>
@@ -596,7 +684,7 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
         }}
         title={selectedRoom ? `Images for: ${selectedRoom.title}` : "Images"}
       >
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end mb-4 dark:text-gray-700">
           <Btn onClick={() => fileInputRef.current?.click()}>Upload Image</Btn>
         </div>
 
@@ -614,7 +702,7 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {roomImages.map((img: RoomImage) => (
-            <div key={img.id} className="border rounded p-2">
+            <div key={img.id} className="border rounded p-2 dark:border-b-red-300">
               <img
                 src={img.img_url}
                 alt="room"
@@ -626,7 +714,7 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
                 </span>
                 <button
                   onClick={() => deleteImage(img.id)}
-                  className="text-xs px-2 py-1 rounded bg-red-100"
+                  className="text-xs px-2 py-1 rounded bg-red-100 dark:text-gray-700 dark:bg-red-500"
                 >
                   Delete
                 </button>
@@ -634,6 +722,67 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
             </div>
           ))}
         </div>
+      </Sheet>
+
+      {/* ---------- Verification Sheet ---------- */}
+
+
+      <Sheet
+        open={showVerificationModal}
+        onClose={() => {
+          setSelectedRoom(null);
+          setShowVerificationModal(false);
+        }}
+        title={selectedRoom ? `Verification for: ${selectedRoom.title}` : "Images"}
+      >
+        <div className="flex justify-end mb-4 dark:text-gray-700">
+          <Btn onClick={() => fileInputRef.current?.click()}>Upload Verification</Btn>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            if (f) await uploadVerification(f);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+        />
+
+<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+  {verification.map((v: Verification) => (
+    <div
+      key={v.id}
+      className={`border rounded p-2 transition-all 
+        ${v.verified 
+          ? "bg-green-100 border-green-400 dark:bg-green-800 dark:border-green-500" 
+          : "bg-red-100 border-red-400 dark:bg-red-800 dark:border-red-500"
+        }`}
+    >
+      <img
+        src={v.proof}
+        alt="room proof"
+        className="w-full h-32 object-cover rounded"
+      />
+
+      <div className="flex justify-between items-center mt-2">
+        <span className="text-xs text-gray-600 dark:text-gray-300">
+          #{String(v.id).slice(0, 6)}
+        </span>
+
+        {/* Icon theo trạng thái */}
+        {v.verified ? (
+          <span className="text-green-600 dark:text-green-300 text-xl">✔</span>
+        ) : (
+          <span className="text-red-600 dark:text-red-300 text-xl">✘</span>
+        )}
+      </div>
+    </div>
+  ))}
+</div>
+
       </Sheet>
 
       {/* ---------- Tags Sheet ---------- */}
@@ -654,6 +803,8 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
               const val = (
                 document.getElementById("new-tag") as HTMLInputElement
               )?.value;
+
+              if (val.toString().toLocaleLowerCase() == "verified") {toast.error("You cannot add verified tags")}
               if (val) {
                 createTag(val);
                 (document.getElementById("new-tag") as HTMLInputElement).value =
@@ -710,7 +861,25 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button
+                  
+                  {b.status == "confirmed" || b.status == "cancelled" ? (
+                    <>
+                    <button
+                    className={`${b.status == "confirmed" ? "px-3 py-4 bg-green-100 rounded" : "px-3 py-4 bg-red-100 rounded"}`}
+                  >
+                    {b.status == "confirmed" ? "Confirmed" : "Refused"}
+                  </button>
+
+                  {b.status == "confirmed" && (<button
+                    className="px-3 py-4 bg-gray-100 rounded"
+                    onClick={() => handleShowTenant(b.tenant_id)}
+                  >
+                    Information of tenant
+                  </button>)}
+                  </>
+                  ) : (
+                    <>
+                    <button
                     className="px-3 py-4 bg-green-100 rounded"
                     onClick={() => updateBookingStatus(b.id, "confirmed")}
                   >
@@ -720,14 +889,38 @@ public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts
                     className="px-3 py-4 bg-red-100 rounded"
                     onClick={() => updateBookingStatus(b.id, "cancelled")}
                   >
-                    Cancel
+                    Refuse
                   </button>
+                  </>
+                  )}
+                  
                 </div>
               </div>
             </div>
           ))}
         </div>
       </Sheet>
+      {/* Tenant modal */}
+      {tenant && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white p-6 rounded-xl shadow-xl w-80 text-center animate-fadeIn">
+            <h3 className="text-xl font-bold mb-3">Landlord Information</h3>
+            <p>
+              <strong>Name:</strong> {tenant.name}
+            </p>
+            <p>
+              <strong>Email:</strong> {tenant.email || "Not available"}
+            </p>
+            <p>
+              <strong>Phone:</strong>{" "}
+              {tenant.phone || "Not available"}
+            </p>
+            <Button onClick={() => setTenant(null)} className="mt-4 w-full">
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
