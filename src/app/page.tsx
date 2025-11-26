@@ -11,7 +11,6 @@ export default function Home() {
   const { role, loading, setLoading } = useUser();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false); 
-  const [cdnImages, setCdnImages] = useState<string[]>([]); 
   useEffect (() => {setLoading(false)})
   useAuthSync(60);
 

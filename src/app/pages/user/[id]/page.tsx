@@ -43,7 +43,7 @@ interface Room {
 export default function UserPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { setLoading } = useUser();
+  const { setLoading, logout } = useUser();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -58,6 +58,7 @@ export default function UserPage() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
 
   useEffect(() => {
     setLoading(false);
@@ -179,22 +180,26 @@ export default function UserPage() {
   };
 
   //================Delete Profile=======================
-  const handleDeleteProfile = async () => {
-    if (!confirm("Are you sure you want to delete your profile?")) return;
+  const handleDeleteProfile = () => {
+    if (!user) return;
+    setOpenConfirmDelete(true);
+  };
+
+  const confirmDelete = async () => {
+    setOpenConfirmDelete(false);
     if (!user) return;
 
     try {
-      setLoading1(true);
+      setLoading(true); // bật loading global từ UserContext
 
       // 1️⃣ Check if user is landlord (has rooms)
       const { data: roomsData, error: roomsError } = await supabase
         .from("rooms")
         .select("id")
         .eq("landlord_id", user.id);
-
       if (roomsError) throw roomsError;
 
-      // 2️⃣ Delete all room images via API
+      // 2️⃣ Delete room images & verifications
       if (roomsData?.length) {
         for (const room of roomsData) {
           await fetch("/api/storage/room_images", {
@@ -207,7 +212,7 @@ export default function UserPage() {
             })(),
           });
 
-          const { data: verifiData, error: verifiError } = await supabase
+          const { data: verifiData } = await supabase
             .from("verifications")
             .select("id")
             .eq("room_id", room.id);
@@ -228,7 +233,7 @@ export default function UserPage() {
         }
       }
 
-      // 3️⃣ Delete avatar via API
+      // 3️⃣ Delete avatar
       if (user.avatar_url) {
         await fetch("/api/storage/avatar", {
           method: "DELETE",
@@ -240,7 +245,7 @@ export default function UserPage() {
         });
       }
 
-      // 5️⃣ Delete user
+      // 4️⃣ Delete user
       const { error: deleteUserError } = await supabase
         .from("users")
         .delete()
@@ -248,12 +253,12 @@ export default function UserPage() {
       if (deleteUserError) throw deleteUserError;
 
       alert("User and all related data deleted.");
-      router.push("/"); // redirect
+      logout(); // từ UserContext
     } catch (err) {
       console.error("Delete user error:", err);
       alert("Failed to delete user.");
     } finally {
-      setLoading1(false);
+      setLoading(false);
     }
   };
 
@@ -330,8 +335,14 @@ export default function UserPage() {
                   >
                     Edit Profile
                   </button>
+                  <ConfirmDeleteModal
+                    open={openConfirmDelete}
+                    onCancel={() => setOpenConfirmDelete(false)}
+                    onConfirm={confirmDelete}
+                  />
+
                   <button
-                    onClick={() => setEditing(true)}
+                    onClick={handleDeleteProfile}
                     className="mt-2 flex text-red-600 hover:underline"
                   >
                     Delete Profile
@@ -459,5 +470,37 @@ export default function UserPage() {
         )}
       </div>
     </div>
+  );
+}
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+
+export function ConfirmDeleteModal({ open, onConfirm, onCancel }) {
+  return (
+    <Dialog open={open} onOpenChange={onCancel}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Are you sure?</DialogTitle>
+        </DialogHeader>
+
+        <p>This action cannot be undone.</p>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

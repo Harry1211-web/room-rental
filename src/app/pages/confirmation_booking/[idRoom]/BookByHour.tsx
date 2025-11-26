@@ -82,7 +82,7 @@ export default function BookingByHour({ room, bookings }: any) {
   const isBookingConflict = () => {
     if (!checkin || !checkout) return false;
 
-    return bookedSlots.some((slot) => {
+    return bookedSlots.some((slot: { start: Date; end: Date }) => {
       const start = slot.start || new Date(0); // nếu start null → coi là từ quá khứ
       const end = slot.end || new Date(8640000000000000); // nếu end null → coi là vô hạn
       // Kiểm tra overlap
@@ -122,7 +122,8 @@ export default function BookingByHour({ room, bookings }: any) {
       {/* Select date */}
       <Calendar
         mode="single"
-        selected={date}
+        selected={date || undefined}
+        required={true}
         onSelect={(d) => {
           if (!d) {
             setDate(null);

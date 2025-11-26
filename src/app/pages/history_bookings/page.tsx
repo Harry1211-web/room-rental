@@ -40,7 +40,6 @@ export default function BookingHistory() {
   const [offset, setOffset] = useState(0);
   const LIMIT = 5;
   const route = useRouter();
-  useEffect(() => {setLoading(false)})
   // Load bookings in pages of 5
   const fetchBookings = async (loadMore = false) => {
     if (!idUser) return;
@@ -112,6 +111,7 @@ export default function BookingHistory() {
     if (error) console.error("Error fetching landlord:", error);
     else setLandlord(data);
   };
+  useEffect(() => {setLoading(false)})
 
   if (loading && bookings.length === 0)
     return <p className="text-center mt-10">Loading...</p>;

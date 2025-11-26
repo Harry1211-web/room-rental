@@ -42,14 +42,14 @@ export default function RoomCard({
   const [imageError, setImageError] = useState(false);
   const router = useRouter();
 
-  // Reset image state when room ID or primary image changes
+  //Reset image state when room ID or primary image changes
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
     setCurrentIndex(0);
   }, [id, validImages[0]]);
 
-  // Image carousel logic
+  //Image carousel logic
   useEffect(() => {
     if (hovering || validImages.length <= 1) return;
     const timer = setInterval(() => {
@@ -82,12 +82,12 @@ export default function RoomCard({
             }`}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             
-            // FIX: Only set imageLoaded to true if the primary image (index 0) loads
+            //Only set imageLoaded to true if the primary image (index 0) loads
             onLoad={() => {
                 if (index === 0) setImageLoaded(true);
             }}
             
-            // FIX: Only set imageError if the source is NOT the default image
+            //Only set imageError if the source is NOT the default image
             onError={() => {
                 if (src !== DEFAULT_FALLBACK_URL) {
                     setImageError(true);

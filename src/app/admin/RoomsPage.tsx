@@ -5,21 +5,13 @@ import { DataTable } from "../../components/DataTable";
 import { toast } from "sonner";
 import { HoverCard } from "../../components/HoverCard";
 import { useRouter } from "next/navigation";
-import { Plus, X, Edit } from "lucide-react";
+import { Plus, X} from "lucide-react";
 
-interface SupabaseRoom {
+interface Tag {
   id: string;
-  title: string | null;
-  status: string | null;
-  created_at?: string | null;
-  landlord_id?: string | null;
-  users?: { name: string | null; email?: string | null }[] | null;
-  rooms_tags?:
-    | {
-        tags: { id: string; value: string; amount: number } | { id: string; value: string; amount: number }[] | null;
-      }[]
-    | null;
-  total_confirm_booking?: number | null;
+  value: string;
+  value_type: string;
+  amount: number;
 }
 
 interface Tag {
@@ -88,12 +80,19 @@ export default function RoomsPage() {
       const tagsByRoomId = (tagsData || []).reduce((acc, item) => {
         if (!acc[item.room_id]) acc[item.room_id] = [];
         if (item.tags) {
-          acc[item.room_id].push({
-            id: item.tags.tag_id,
-            name: item.tags.name,
-            value: item.tags.value,
-            value_type: item.tags.value_type,
-            amount: item.tags.amount ?? 0 
+          // Handle both array and single object cases
+          const tagsArray = Array.isArray(item.tags) ? item.tags : [item.tags];
+          
+          tagsArray.forEach(tag => {
+            if (tag) {
+              acc[item.room_id].push({
+                id: tag.tag_id,  // This should now work
+                name: tag.name,
+                value: tag.value,
+                value_type: tag.value_type,
+                amount: tag.amount ?? 0 
+              });
+            }
           });
         }
         return acc;

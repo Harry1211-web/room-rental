@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate"; // <-- FIX
 
 const config: Config = {
   darkMode: "class",
@@ -26,8 +27,6 @@ const config: Config = {
           "0%": { opacity: "1" },
           "100%": { opacity: "0" },
         },
-
-        // Animation của bạn (không xóa)
         fadeIn: {
           "0%": { opacity: 0, transform: "translateY(10px)" },
           "100%": { opacity: 1, transform: "translateY(0)" },
@@ -49,15 +48,12 @@ const config: Config = {
         "slide-out-to-right": "slide-out-to-right 0.25s ease-in forwards",
         "fade-in": "fade-in 0.3s ease-out",
         "fade-out": "fade-out 0.3s ease-in",
-
-        // animation cũ của bạn
         fadeIn: "fadeIn 0.5s ease forwards",
       },
     },
   },
-
   plugins: [
-    require("tailwindcss-animate"), // ⚡ cần plugin này
+    animate, // <-- FIXED
   ],
 };
 

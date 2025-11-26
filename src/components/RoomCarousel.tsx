@@ -75,7 +75,9 @@ export function RoomCarousel({
                 style={{ transitionDelay: `${i * 50}ms` }} 
               >
                 <RoomCard 
-                  {...room} 
+                  {...room}
+                  area={room.area ? parseFloat(room.area) : undefined}
+                  tags={room.tags || []}
                   priority={isFirstCarousel && i < 2}
                 />
               </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import RoomCard from "@/components/RoomCard";
-import { Loader } from "@/components/Loader"; //Import your Loader component
+import { Loader } from "@/components/Loader";
 
 interface RoomWithExtras {
   id: string;
@@ -18,7 +18,8 @@ interface RoomWithExtras {
   images: string[];
 }
 
-export default function AdvancedSearchPage() {
+//Move the main logic to a separate component that uses useSearchParams
+function AdvancedSearchContent() {
   const searchParams = useSearchParams();
 
   const [rooms, setRooms] = useState<RoomWithExtras[]>([]);
@@ -35,7 +36,7 @@ export default function AdvancedSearchPage() {
     tags: searchParams.getAll("tags"),
     priceMin: searchParams.get("priceMin") || "",
     priceMax: searchParams.get("priceMax") || "",
-    search: searchParams.get("search") || "", //Add search term
+    search: searchParams.get("search") || "",
   };
 
   const startTime = filters.checkinDate
@@ -137,7 +138,7 @@ export default function AdvancedSearchPage() {
     filters.checkoutDate,
     filters.checkinTime,
     filters.checkoutTime,
-    filters.search, //Add search to dependencies
+    filters.search,
   ]);
 
   //Display search term in the header
@@ -200,5 +201,14 @@ export default function AdvancedSearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+//Main component that wraps with Suspense
+export default function AdvancedSearchPage() {
+  return (
+    <Suspense fallback={<Loader message="Loading search..." />}>
+      <AdvancedSearchContent />
+    </Suspense>
   );
 }

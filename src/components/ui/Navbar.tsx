@@ -11,13 +11,13 @@ import { Button } from "./button";
 
 //Import the specialized search components
 import { NavbarBasicSearch } from "./NavbarBasicSearch";
-import { NavbarAdvancedSearchContainer } from "./NavbarAdvancedSearchContainer"; 
+import { NavbarAdvancedSearchContainer } from "./NavbarAdvancedSearchContainer";
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { idUser, role, loading, logout, setLoading } = useUser();
-  
+
   const [dropdownMenuOpen, setDropdownMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -52,13 +52,12 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownMenuOpen]);
-  
+
   //Determine which search bar to show in the center
-  const showBasicSearch = !isAdvancedSearchPage; 
+  const showBasicSearch = !isAdvancedSearchPage;
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-white dark:bg-gray-900 shadow-md dark:shadow-gray-800 px-6 py-3 flex items-center justify-between z-50 transition-colors duration-300">
-      
       {/* 1. Logo */}
       <div
         className="flex items-center gap-2 cursor-pointer"
@@ -71,7 +70,9 @@ export default function Navbar() {
           height={40}
           className="dark:invert"
           style={{ width: "auto", height: "auto" }}
-          onClick={() => {setLoading(true)}}
+          onClick={() => {
+            setLoading(true);
+          }}
         />
         <span className="font-bold text-xl text-gray-800 dark:text-gray-100">
           Room Rental
@@ -80,19 +81,24 @@ export default function Navbar() {
 
       {/* 2. Center Search/Filter Area */}
       {role !== "admin" && !isAuthPage && (
-        <> 
-              {showBasicSearch && <NavbarBasicSearch />}
-              {isAdvancedSearchPage && <NavbarAdvancedSearchContainer isAdvancedSearchPage={isAdvancedSearchPage} />}
+        <>
+          {showBasicSearch && <NavbarBasicSearch />}
+          {isAdvancedSearchPage && (
+            <NavbarAdvancedSearchContainer
+              isAdvancedSearchPage={isAdvancedSearchPage}
+            />
+          )}
         </>
       )}
-
 
       {/* 3. Right side - Theme Toggle, Auth/Profile */}
       <div className="flex items-center gap-3 relative">
         {/* Theme Toggle */}
         {mounted && (
           <button
-            onClick={() => {setTheme(theme === "light" ? "dark" : "light")}}
+            onClick={() => {
+              setTheme(theme === "light" ? "dark" : "light");
+            }}
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
             aria-label="Toggle theme"
           >
@@ -112,11 +118,17 @@ export default function Navbar() {
             <div className="flex items-center gap-3 relative">
               {!loading && !isLoggedIn ? (
                 <div className="flex gap-2">
-                  <Button onClick={() => {router.push("/pages/auth?mode=login"), setLoading(true)}}>
+                  <Button
+                    onClick={() => {
+                      router.push("/pages/auth?mode=login");
+                    }}
+                  >
                     Login
                   </Button>
                   <Button
-                    onClick={() => {router.push("/pages/auth?mode=register"), setLoading(true)}}
+                    onClick={() => {
+                      router.push("/pages/auth?mode=register")
+                    }}
                   >
                     Sign Up
                   </Button>
@@ -149,33 +161,40 @@ export default function Navbar() {
                         {role === "landlord" && (
                           <button
                             className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
-                            onClick={() => {handleMenuClick("/pages/rooms"), setLoading(true)}}
+                            onClick={() => {
+                              handleMenuClick("/pages/rooms");
+                            }}
                           >
                             Manage Rooms
                           </button>
                         )}
                         {role !== "admin" && (
                           <>
-                          <button
-                          className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
-                          onClick={() => {handleMenuClick("/pages/history_bookings"), setLoading(true)}}
-                        >
-                          Booking History
-                        </button>
+                            <button
+                              className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
+                              onClick={() => {
+                                handleMenuClick("/pages/history_bookings");
+                              }}
+                            >
+                              Booking History
+                            </button>
 
-                        <button
-                          className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
-                          onClick={() => {handleMenuClick("/pages/reports"), setLoading(true)}}
-                        >
-                          Reports
-                        </button>
-                        </>
+                            <button
+                              className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
+                              onClick={() => {
+                                handleMenuClick("/pages/reports")
+                              }}
+                            >
+                              Reports
+                            </button>
+                          </>
                         )}
 
-
                         <button
                           className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 menu-dropdown"
-                          onClick={() => {handleMenuClick(`/pages/user/${idUser}`), setLoading(true)}}
+                          onClick={() => {
+                            handleMenuClick(`/pages/user/${idUser}`)
+                          }}
                         >
                           Profile & Settings
                         </button>

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
@@ -7,7 +7,7 @@ import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 import ForgotForm from "./ForgotForm";
 
-export default function AuthPage() {
+function AuthContent() {
   const { setLoading } = useUser();
   const router = useRouter();
   const { setUserFromServer } = useUser();
@@ -15,20 +15,15 @@ export default function AuthPage() {
   const modeParam = searchParams.get("mode");
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
 
-  // Dark mode state
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {setLoading(false)})
 
   useEffect(() => {
-    // Detect system dark mode preference
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)"
     ).matches;
     setIsDarkMode(prefersDark);
-
-    // Optionally, you can persist this setting
-    // localStorage.setItem("theme", prefersDark ? "dark" : "light");
   }, []);
 
   useEffect(() => {
@@ -44,36 +39,32 @@ export default function AuthPage() {
   const changeModeAndSyncUrl = (newMode: "login" | "register" | "forgot") => {
     setMode(newMode);
 
-    // Create new URL parameters, setting the 'mode'
     const newSearchParams = new URLSearchParams(searchParams.toString());
     newSearchParams.set("mode", newMode);
 
-    // Update the URL without a full page reload
     router.replace(`?${newSearchParams.toString()}`, { scroll: false });
   };
 
-  // Helper function to get the correct background image URL
   const getBackgroundUrl = () => {
     switch (mode) {
       case "login":
-        return "url('/bg-login.png')"; // Use the public path
+        return "url('/bg-login.png')";
       case "register":
         return "url('/bg-register.png')";
       case "forgot":
         return "url('/bg-forgot.png')";
       default:
-        return "none"; // Default or fallback image
+        return "none";
     }
   };
 
-  // Define the base background classes for common styling
-  const backgroundClasses = `bg-cover bg-center transition-all duration-500 ease-in-out`; // Add common classes
+  const backgroundClasses = `bg-cover bg-center transition-all duration-500 ease-in-out`;
 
   return (
     <div
       className={`min-h-screen flex items-center justify-center p-6 ${backgroundClasses}`}
       style={{
-        backgroundImage: getBackgroundUrl(), // Set the image based on mode
+        backgroundImage: getBackgroundUrl(),
       }}
     >
       <div
@@ -116,5 +107,20 @@ export default function AuthPage() {
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    // <Suspense fallback={
+    //   <div className="min-h-screen flex items-center justify-center">
+    //     <div className="text-center">
+    //       <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+    //       <p className="text-gray-600">Loading authentication...</p>
+    //     </div>
+    //   </div>
+    // }>
+    <AuthContent />
+    // </Suspense>
   );
 }

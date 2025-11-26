@@ -29,16 +29,18 @@ export default function RecommendPage() {
     const fetchRooms = async () => {
       try {
         setIsLoading(true);
+        
+        // Remove the generic type from rpc calls
         const [booked, rated, hot] = await Promise.all([
-          supabase.rpc<Room[]>("rpc_top_booked_rooms"),
-          supabase.rpc<Room[]>("rpc_top_rated_rooms"),
-          supabase.rpc<Room[]>("rpc_hot_rooms_this_month")
+          supabase.rpc("rpc_top_booked_rooms"),
+          supabase.rpc("rpc_top_rated_rooms"),
+          supabase.rpc("rpc_hot_rooms_this_month")
         ]);
 
-        // Update states only once data is fetched
-        setTopBooked(booked.data ?? []);
-        setTopRated(rated.data ?? []);
-        setHotThisMonth(hot.data ?? []);
+        // Update states with proper typing
+        setTopBooked((booked.data as Room[]) ?? []);
+        setTopRated((rated.data as Room[]) ?? []);
+        setHotThisMonth((hot.data as Room[]) ?? []);
         setShowRooms(true);
       } catch (err) {
         console.error("Error fetching rooms:", err);

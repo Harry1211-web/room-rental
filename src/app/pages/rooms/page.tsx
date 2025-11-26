@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
 import { toast } from "sonner";
@@ -52,7 +51,7 @@ export default function RoomsDashboardPage() {
   // Form state (used for both create and edit)
   const [form, setForm] = useState({
     id: "",
-    landlord_id: idUser,
+    landlord_id: "",
     title: "",
     description: "",
     city: "",
@@ -60,6 +59,12 @@ export default function RoomsDashboardPage() {
     area: "",
     address: "",
   });
+  useEffect(() => {
+    if (!loading && idUser) {
+      setForm((prev) => ({ ...prev, landlord_id: idUser }));
+    }
+  }, [loading, idUser]);
+
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   useEffect(() => {setLoading(false)})
@@ -193,7 +198,7 @@ export default function RoomsDashboardPage() {
   function resetForm() {
     setForm({
       id: "",
-      landlord_id: idUser,
+      landlord_id: idUser || "",
       title: "",
       description: "",
       city: "",
@@ -393,54 +398,51 @@ export default function RoomsDashboardPage() {
       {children}
     </button>
   );
+  const titleInputRef = useRef<HTMLInputElement>(null);
+const [hasFocused, setHasFocused] = useState(false);
+
+useEffect(() => {
+  if (showNewModal && !hasFocused) {
+    titleInputRef.current?.focus();
+    setHasFocused(true);
+  }
+  if (!showNewModal) setHasFocused(false);
+}, [showNewModal, hasFocused]);
+public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts next.config.ts package-lock.json package.json postcss.config.mjs README.md Room_Rental_SRS.docx tailwind.config.ts tempfile.txt testSupabase.js tsconfig.json tsconfig.tsbuildinfo
   if (loading) return <div>Loading...</div>; // hoặc skeleton UI
   // ---------- Sheet component (slide-in from right) ----------
- const Sheet = ({ open, onClose, title, children }: any) => {
-  const [isVisible, setIsVisible] = useState(open);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const Sheet = ({ open, onClose, title, children }: any) => {
+    return (
+      <>
+        {/* overlay */}
+        <div
+          className={`fixed inset-0 z-40 transition-opacity ${
+            open ? "opacity-100 visible" : "opacity-0 invisible"
+          }`}
+          aria-hidden
+          onClick={onClose}
+          style={{
+            transitionDuration: "200ms",
+            backgroundColor: "rgba(0,0,0,0.35)",
+          }}
+        />
+        {/* panel */}
+        <aside
+          className={`fixed top-0 right-0 z-50 h-full w-full max-w-[720px] transform bg-white shadow-2xl overflow-auto ${
+            open ? "translate-x-0" : "translate-x-full"
+          } transition-transform`}
+          style={{ transitionDuration: "220ms" }}
+          onClick={(e) => e.stopPropagation()} // ← thêm dòng này
 
-  useEffect(() => {
-    if (open) {
-      setIsVisible(true); // mount panel
-      // trigger animation on next frame
-      const id = requestAnimationFrame(() => setIsAnimating(true));
-      return () => cancelAnimationFrame(id);
-    } else {
-      setIsAnimating(false); // trigger slide-out
-    }
-  }, [open]);
-
-  function handleTransitionEnd() {
-    if (!isAnimating) setIsVisible(false); // unmount after slide-out
-  }
-
-  if (!isVisible) return null;
-
-  return (
-    <>
-      {/* overlay */}
-      <div
-        className={`fixed inset-0 z-40 transition-opacity ${
-          isAnimating ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={onClose}
-        style={{ transitionDuration: "500ms", backgroundColor: "rgba(0,0,0,0.35)" }}
-      />
-
-      {/* panel */}
-      <aside
-        ref={panelRef}
-        className={`fixed top-0 right-0 z-50 h-full w-full max-w-[720px] bg-white shadow-2xl overflow-auto
-          transform transition-transform duration-300
-          ${isAnimating ? "translate-x-0" : "translate-x-full"}
-        `}
-        onTransitionEnd={handleTransitionEnd}
-      >
-        <div className="p-6">
-          <div className="flex items-start justify-between">
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <button className="text-gray-500" onClick={onClose}>✕</button>
+        >
+          <div className="p-6">
+            <div className="flex items-start justify-between">
+              <h3 className="text-lg font-semibold">{title}</h3>
+              <button className="text-gray-500" onClick={onClose}>
+                ✕
+              </button>
+            </div>
+            <div className="mt-4">{children}</div>
           </div>
           <div className="mt-4">{children}</div>
         </div>
@@ -533,7 +535,9 @@ export default function RoomsDashboardPage() {
             className="w-full p-2 border rounded"
             placeholder="Title"
             value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, title: e.target.value }))
+            }
           />
           <textarea
             className="w-full p-2 border rounded"
@@ -585,12 +589,15 @@ export default function RoomsDashboardPage() {
           </div>
 
           <div className="flex gap-2">
-            <Btn onClick={createRoom}>Create</Btn>
+            <Btn onClick={createRoom} className="bg-green-100">
+              Create
+            </Btn>
             <Btn
               onClick={() => {
                 resetForm();
                 setShowNewModal(false);
               }}
+              className="bg-red-100"
             >
               Cancel
             </Btn>
