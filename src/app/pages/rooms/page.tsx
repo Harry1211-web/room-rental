@@ -327,7 +327,6 @@ useEffect(() => {
   }
   if (!showNewModal) setHasFocused(false);
 }, [showNewModal, hasFocused]);
-public src .env.local .gitignore components.json eslint.config.mjs next-env.d.ts next.config.ts package-lock.json package.json postcss.config.mjs README.md Room_Rental_SRS.docx tailwind.config.ts tempfile.txt testSupabase.js tsconfig.json tsconfig.tsbuildinfo
   if (loading) return <div>Loading...</div>; // hoặc skeleton UI
   // ---------- Sheet component (slide-in from right) ----------
   const Sheet = ({ open, onClose, title, children }: any) => {
