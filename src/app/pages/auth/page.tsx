@@ -1,13 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 import ForgotForm from "./ForgotForm";
 
 export default function AuthPage() {
+  const { setLoading } = useUser();
+  const router = useRouter();
   const { setUserFromServer } = useUser();
   const searchParams = useSearchParams();
   const modeParam = searchParams.get("mode");
@@ -16,28 +18,63 @@ export default function AuthPage() {
   // Dark mode state
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  useEffect(() => {setLoading(false)})
+
   useEffect(() => {
     // Detect system dark mode preference
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
     setIsDarkMode(prefersDark);
-    
+
     // Optionally, you can persist this setting
     // localStorage.setItem("theme", prefersDark ? "dark" : "light");
   }, []);
 
   useEffect(() => {
-    if (modeParam === "register" || modeParam === "forgot" || modeParam === "login") {
+    if (
+      modeParam === "register" ||
+      modeParam === "forgot" ||
+      modeParam === "login"
+    ) {
       setMode(modeParam);
     }
   }, [modeParam]);
 
-  const resetFormAndErrors = (newMode: "login" | "register" | "forgot") => {
+  const changeModeAndSyncUrl = (newMode: "login" | "register" | "forgot") => {
     setMode(newMode);
+
+    // Create new URL parameters, setting the 'mode'
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    newSearchParams.set("mode", newMode);
+
+    // Update the URL without a full page reload
+    router.replace(`?${newSearchParams.toString()}`, { scroll: false });
   };
+
+  // Helper function to get the correct background image URL
+  const getBackgroundUrl = () => {
+    switch (mode) {
+      case "login":
+        return "url('/bg-login.png')"; // Use the public path
+      case "register":
+        return "url('/bg-register.png')";
+      case "forgot":
+        return "url('/bg-forgot.png')";
+      default:
+        return "none"; // Default or fallback image
+    }
+  };
+
+  // Define the base background classes for common styling
+  const backgroundClasses = `bg-cover bg-center transition-all duration-500 ease-in-out`; // Add common classes
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-6 dark:bg-gray-900 dark:from-gray-800 dark:to-gray-900`}
+      className={`min-h-screen flex items-center justify-center p-6 ${backgroundClasses}`}
+      style={{
+        backgroundImage: getBackgroundUrl(), // Set the image based on mode
+      }}
     >
       <div
         className={`bg-white shadow-lg rounded-2xl p-8 w-full max-w-md relative overflow-hidden dark:bg-gray-800`}
@@ -67,14 +104,15 @@ export default function AuthPage() {
 
         <AnimatePresence mode="wait">
           {mode === "login" && (
-            <LoginForm setMode={resetFormAndErrors} setUserFromServer={setUserFromServer} />
+            <LoginForm
+              setMode={changeModeAndSyncUrl}
+              setUserFromServer={setUserFromServer}
+            />
           )}
           {mode === "register" && (
-            <RegisterForm setMode={resetFormAndErrors} />
+            <RegisterForm setMode={changeModeAndSyncUrl} />
           )}
-          {mode === "forgot" && (
-            <ForgotForm setMode={resetFormAndErrors} />
-          )}
+          {mode === "forgot" && <ForgotForm setMode={changeModeAndSyncUrl} />}
         </AnimatePresence>
       </div>
     </div>

@@ -1,28 +1,16 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandGroup,
-} from "@/components/ui/command";
+import { Command, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { format } from "date-fns";
 
 interface TimePickerProps {
   label?: string;
   value: Date | null;
   onChange: (date: Date) => void;
-  minTime?: Date | null; // Minimum selectable time
-  disable: boolean; // Disable the time picker
-  bookedSlots?: { start: Date; end: Date }[]; // Booked slots
+  minTime?: Date | null; //Minimum selectable time
+  disable: boolean; //Disable the time picker
+  bookedSlots?: { start: Date; end: Date }[]; //Booked slots
 }
 
 export default function TimePicker({
@@ -36,12 +24,12 @@ export default function TimePicker({
   const [open, setOpen] = useState(false);
   const [internalValue, setInternalValue] = useState(value);
 
-  // Sync internal value when parent value changes
+  //Sync internal value when parent value changes
   useEffect(() => {
     setInternalValue(value);
   }, [value]);
 
-  // Generate 30-min interval times for the day
+  //Generate 30-min interval times for the day
   const generateTimes = () => {
     const times: { label: string; date: Date }[] = [];
     const baseDate = internalValue ? new Date(internalValue) : new Date();
@@ -59,16 +47,16 @@ export default function TimePicker({
     return times;
   };
 
-  // Determine if a specific time should be disabled
+  //Determine if a specific time should be disabled
   const isDisabled = (d: Date) => {
     if (!minTime && !bookedSlots) return false;
 
-    // Check minTime
+    //Check minTime
     if (minTime && d < minTime) return true;
 
     if (!bookedSlots) return false;
 
-    // Filter slots cùng ngày với d
+    //Filter slots cùng ngày với d
     const sameDaySlots = bookedSlots.filter(
       (slot) =>
         (slot.start &&
@@ -89,7 +77,7 @@ export default function TimePicker({
       } else if (!slot.start && slot.end) {
         return d < slot.end;
       }
-      return false; // neither start nor end → ignore
+      return false; //neither start nor end → ignore
     });
   };
 
@@ -110,7 +98,7 @@ export default function TimePicker({
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent className="p-0 w-48 time-picker-popup">
+        <PopoverContent className="p-0 w-full sm:w-64 time-picker-popup">
           <Command>
             <CommandInput placeholder="Search time..." />
             <CommandList>
@@ -125,8 +113,8 @@ export default function TimePicker({
                       className={disabled ? "text-red-500" : ""}
                       onSelect={() => {
                         if (disabled) return;
-                        setInternalValue(t.date); // Update local state
-                        onChange(t.date); // Sync with parent
+                        setInternalValue(t.date); //Update local state
+                        onChange(t.date); //Sync with parent
                         setOpen(false);
                       }}
                     >

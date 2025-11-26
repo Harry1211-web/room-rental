@@ -29,6 +29,16 @@ export default function ReportsPage() {
 
   const router = useRouter();
 
+  const formatDate = (isoDate?: string | null) => {
+    if (!isoDate) return "00/00/0000";
+    const parsedDate = new Date(isoDate);
+    if (Number.isNaN(parsedDate.getTime())) return "00/00/0000";
+    const day = String(parsedDate.getDate()).padStart(2, "0");
+    const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+    const year = parsedDate.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   async function fetchReports() {
     try {
       const { data, error } = await supabase
@@ -84,11 +94,9 @@ export default function ReportsPage() {
 
   const filteredReports = reports.filter(r => r.id?.toLowerCase().includes(search.toLowerCase()));
 
-  const statusOptions = ["pending", "reviewed"];
-
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">🧾 Reports Management</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">🧾 Reports Management</h1>
 
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <input
@@ -96,7 +104,7 @@ export default function ReportsPage() {
           placeholder="Search report by ID"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 w-64 transition"
+          className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 w-64 transition bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
         />
       </div>
 
@@ -105,16 +113,17 @@ export default function ReportsPage() {
           {
             key: "reporter_id",
             label: "Reporter",
+            width: "w-[120px]",
             render: r => r.reporter_id ? (
               <HoverCard content={
-                <div>
-                  <p><strong>Name:</strong> {usersMap.get(r.reporter_id)?.name ?? "N/A"}</p>
-                  <p><strong>Email:</strong> {usersMap.get(r.reporter_id)?.email ?? "N/A"}</p>
-                  <p><strong>ID:</strong> {r.reporter_id}</p>
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {usersMap.get(r.reporter_id)?.name ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {usersMap.get(r.reporter_id)?.email ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.reporter_id}</p>
                 </div>
               }>
                 <button
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-left"
                   onClick={() => router.push(`pages/user/${r.reporter_id}`)}
                 >
                   {usersMap.get(r.reporter_id)?.name ?? r.reporter_id}
@@ -125,16 +134,17 @@ export default function ReportsPage() {
           {
             key: "targeted_user_id",
             label: "Targeted User",
+            width: "w-[120px]",
             render: r => r.targeted_user_id ? (
               <HoverCard content={
-                <div>
-                  <p><strong>Name:</strong> {usersMap.get(r.targeted_user_id)?.name ?? "N/A"}</p>
-                  <p><strong>Email:</strong> {usersMap.get(r.targeted_user_id)?.email ?? "N/A"}</p>
-                  <p><strong>ID:</strong> {r.targeted_user_id}</p>
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {usersMap.get(r.targeted_user_id)?.name ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {usersMap.get(r.targeted_user_id)?.email ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.targeted_user_id}</p>
                 </div>
               }>
                 <button
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-left"
                   onClick={() => router.push(`pages/user/${r.targeted_user_id}`)}
                 >
                   {usersMap.get(r.targeted_user_id)?.name ?? r.targeted_user_id}
@@ -145,15 +155,16 @@ export default function ReportsPage() {
           {
             key: "room_id",
             label: "Room",
+            width: "min-w-[220px]",
             render: r => r.room_id ? (
               <HoverCard content={
-                <div>
-                  <p><strong>Room:</strong> {roomsMap.get(r.room_id)?.name ?? "N/A"}</p>
-                  <p><strong>Room ID:</strong> {r.room_id}</p>
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Room:</strong> {roomsMap.get(r.room_id)?.name ?? "N/A"}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Room ID:</strong> {r.room_id}</p>
                 </div>
               }>
                 <button
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-left"
                   onClick={() => router.push(`pages/room/${r.room_id}`)}
                 >
                   {roomsMap.get(r.room_id)?.name ?? r.room_id}
@@ -161,40 +172,38 @@ export default function ReportsPage() {
               </HoverCard>
             ) : "—",
           },
-          { key: "reason", label: "Reason" },
+          { key: "reason", label: "Reason", width: "w-[18 0px]" },
           {
             key: "status",
             label: "Status",
-            type: "select",
-            options: [
-              { label: "🟡 Pending", value: "pending" },
-              { label: "✅ Reviewed", value: "reviewed" },
-              { label: "❌ Rejected", value: "rejected" },
-            ],
-            render: (value: string | null) => {
+            width: "w-[150px]",
+            render: (r: Report) => {
+              const value = r.status;
               switch (value) {
                 case "reviewed":
-                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-800 font-medium text-sm">✅ Reviewed</span>;
+                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium text-sm">✅ Reviewed</span>;
                 case "rejected":
-                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 text-red-700 font-medium text-sm">❌ Rejected</span>;
+                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 font-medium text-sm">❌ Rejected</span>;
                 default:
-                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 font-medium text-sm">🟡 Pending</span>;
+                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 font-medium text-sm">🟡 Pending</span>;
               }
             },
           },
-          { key: "created_at", label: "Date Sent", render: r => new Date(r.created_at).toLocaleDateString() },
+          { key: "created_at", label: "Date Sent", width: "w-[120px]", render: r => formatDate(r.created_at) },
           {
             key: "proof",
             label: "Proof Picture",
+            width: "w-[120px]",
             render: r => r.proof ? (
-              <button onClick={() => setPreviewImage(r.proof ?? null)} className="p-1 border rounded-lg hover:shadow-md transition">
+              <button onClick={() => setPreviewImage(r.proof ?? null)} className="p-1 border dark:border-gray-700 rounded-lg hover:shadow-md transition">
                 <img src={r.proof} alt="Proof" className="w-20 h-20 object-cover rounded" />
               </button>
             ) : "—",
           },
           {
-            key: "actions",
+            key: undefined,
             label: "Actions",
+            width: "w-[100px]",
             render: r => (
               <button
                 onClick={() => setEditingReport(r)}
@@ -208,7 +217,6 @@ export default function ReportsPage() {
         data={filteredReports}
         rowsPerPage={10}
         rowKey="id"
-        rowClassName="hover:bg-gray-50 transition"
       />
 
       {editingReport && (
@@ -229,16 +237,12 @@ export default function ReportsPage() {
               label: "Status",
               type: "select",
               options: [
-                { label: "🟡 Pending", value: "pending" },
-                { label: "✅ Reviewed", value: "reviewed" },
-                { label: "❌ Rejected", value: "rejected" },
+                { key: "pending", label: "🟡 Pending", value: "pending" },
+                { key: "reviewed", label: "✅ Reviewed", value: "reviewed" },
+                { key: "rejected", label: "❌ Rejected", value: "rejected" },
               ],
             },
           ]}
-          modalClassName="p-6 rounded-lg shadow-xl bg-white max-w-md mx-auto"
-          titleClassName="text-xl font-semibold mb-4 text-gray-800"
-          saveButtonClassName="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-          cancelButtonClassName="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
         />
       )}
 

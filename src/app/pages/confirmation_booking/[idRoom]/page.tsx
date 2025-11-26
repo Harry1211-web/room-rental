@@ -10,7 +10,7 @@ import BookingByHour from "./BookByHour";
 
 export default function ConfirmationBooking() {
   const { idRoom } = useParams();
-  const [room, setRoom] = useState<any>(null);
+  const [room, setRoom] = useState<any>(null); 
   const [bookings, setBookings] = useState<any[]>([]);
   const [mode, setMode] = useState<"day" | "hour">("day");
   const [loading, setLoading] = useState(true);
