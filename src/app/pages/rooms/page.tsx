@@ -340,7 +340,8 @@ export default function RoomsDashboardPage() {
         {
           verified: false,
           type: "certificate",
-          room_id: selectedRoom.id
+          room_id: selectedRoom.id,
+          landlord_id: idUser
         },
       ])
       .select("id")
