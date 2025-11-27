@@ -74,15 +74,36 @@ export default function UsersPage() {
     }
   }
 
-  async function handleDelete(u: User) {
-    if (!confirm(`Delete ${u.name}?`)) return;
-    const { error } = await supabase.from("users").delete().eq("id", u.id);
-    if (error) toast.error("Cannot be deleted!");
-    else {
-      toast.success("Deleted!");
-      fetchUsers();
+async function handleDelete(u: User) {
+  if (!confirm(`Are you sure you want to delete user: ${u.name ?? u.email}? This action is irreversible.`)) return;
+  
+  try {
+    // 1. Xóa record người dùng khỏi bảng 'users'
+    const { error: dbError } = await supabase.from("users").delete().eq("id", u.id);
+    if (dbError) throw dbError;
+
+    // 2. Xóa ảnh đại diện liên quan bằng cách gọi API route /api/avatar
+    const formData = new FormData();
+    formData.append("userId", u.id); 
+
+    const res = await fetch("/api/avatar", {
+      method: "DELETE",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.warn("User deleted, but failed to delete avatar:", errorData.error);
     }
+    
+    toast.success("User and associated avatar deleted successfully!");
+    fetchUsers(); 
+
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    toast.error(`Cannot be deleted! ${error instanceof Error ? error.message : "An unknown error occurred."}`);
   }
+}
 
   return (
     <div className="p-6 space-y-6">

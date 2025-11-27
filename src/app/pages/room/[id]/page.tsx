@@ -275,7 +275,7 @@ export default function RoomDetailPage() {
               className="relative w-full h-60 rounded-lg overflow-hidden"
             >
               <Image
-                src={url}
+                src={url || "/room-img-default.png"}
                 alt="Room image"
                 fill
                 className="object-cover"

@@ -114,15 +114,45 @@ export default function VerificationsPage() {
     }
   }
 
-  async function handleDelete(v: Verification) {
-    if (!confirm(`Delete verification ${v.id} of ${v.landlord_id}?`)) return;
-    const { error } = await supabase.from("verifications").delete().eq("id", v.id);
-    if (error) toast.error("Cannot be deleted!");
-    else {
-      toast.success("Deleted!");
-      fetchVerifications();
+async function handleDelete(v: Verification) {
+  if (!confirm(`Are you sure you want to delete verification ${v.id} of ${v.landlord_id}? This will also delete the proof image.`)) return;
+
+  try {
+    // Lấy ID phòng và ID xác minh
+    const idRoom = v.room_id;
+    const verification_id = v.id;
+
+    // 1. Xóa record trong bảng 'verifications'
+    const { error: dbError } = await supabase.from("verifications").delete().eq("id", verification_id);
+    if (dbError) throw dbError;
+
+    // 2. Xóa tệp bằng chứng liên quan bằng cách gọi API route /api/verification_proof
+    if (idRoom && verification_id) {
+        const formData = new FormData();
+        formData.append("action", "delete-one");
+        formData.append("idRoom", idRoom); 
+        formData.append("verification_id", verification_id);
+        
+        const res = await fetch("/api/verification_proof", {
+            method: "DELETE",
+            body: formData,
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            console.warn("Verification deleted, but failed to delete proof image:", errorData.error);
+            toast.warning("Verification deleted, but proof image cleanup failed.");
+        }
     }
+
+    toast.success("Verification and associated proof deleted successfully!");
+    fetchVerifications();
+  } catch (error) {
+    console.error("Error deleting verification:", error);
+    toast.error(`Cannot be deleted! ${error instanceof Error ? error.message : "An unknown error occurred."}`);
   }
+}
+
 
   return (
     <div className="p-6">

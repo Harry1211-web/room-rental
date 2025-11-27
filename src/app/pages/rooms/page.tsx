@@ -35,12 +35,18 @@ interface Booking {
   status: string;
   total_price: number;
   tenant_id: string;
-  users: { name: string; email: string };
+  users: { name: string; email: string; phone_number: string };
 }
 
 interface RoomImage {
   id: string;
   img_url: string;
+}
+
+interface Verification {
+  id: string;
+  proof: string;
+  verified: boolean;
 }
 
 interface RoomFormState {
@@ -78,7 +84,17 @@ const Btn = ({ children, onClick, className = "", disabled = false }: any) => (
   </button>
 );
 
-const Sheet = ({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) => (
+const Sheet = ({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) => (
   <>
     <div
       className={`fixed inset-0 z-40 transition-opacity bg-black/40 backdrop-blur-sm ${
@@ -94,7 +110,9 @@ const Sheet = ({ open, onClose, title, children }: { open: boolean; onClose: () 
     >
       <div className="p-6">
         <div className="flex items-center justify-between mb-6 border-b pb-4 dark:border-gray-700">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            {title}
+          </h3>
           <button
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
             onClick={onClose}
@@ -142,13 +160,21 @@ const TagSelector = ({
               }`}
             >
               <span className="font-medium">{t.name}</span>
-              
+
               {/* --- Format Update: Name (Amount) --- */}
-              <span className={`text-[10px] ${selectedTagIds.includes(t.tag_id) ? "opacity-80 text-blue-100" : "text-gray-400"}`}>
+              <span
+                className={`text-[10px] ${
+                  selectedTagIds.includes(t.tag_id)
+                    ? "opacity-80 text-blue-100"
+                    : "text-gray-400"
+                }`}
+              >
                 ({t.amount || 0})
               </span>
 
-              {!readonly && selectedTagIds.includes(t.tag_id) && <span className="font-bold ml-0.5">✓</span>}
+              {!readonly && selectedTagIds.includes(t.tag_id) && (
+                <span className="font-bold ml-0.5">✓</span>
+              )}
             </button>
           ))}
         </div>
@@ -167,6 +193,7 @@ export default function RoomsDashboardPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [roomImages, setRoomImages] = useState<RoomImage[]>([]);
+  const [verification, setVerification] = useState<Verification[]>([]);
 
   // Selection State
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
@@ -179,13 +206,15 @@ export default function RoomsDashboardPage() {
     images: false,
     tags: false,
     bookings: false,
+    verification: false,
   });
 
   // Tag Creation State
   const [newTagName, setNewTagName] = useState("");
   const [newTagCategory, setNewTagCategory] = useState("Amenities");
 
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const fileInputRefImages = React.useRef<HTMLInputElement>(null);
+  const fileInputRefVerification = React.useRef<HTMLInputElement>(null);
 
   // Form State
   const [form, setForm] = useState<RoomFormState>(INITIAL_FORM);
@@ -226,11 +255,13 @@ export default function RoomsDashboardPage() {
   async function fetchRooms() {
     const { data, error } = await supabase
       .from("rooms")
-      .select(`
+      .select(
+        `
         id, title, description, city, price, area, address, average_rating,
         room_images(id, img_url, order_index),
         rooms_tags(tag_id, tags(tag_id, name, value_type, value))
-      `)
+      `
+      )
       .eq("landlord_id", idUser)
       .order("created_at", { ascending: false });
 
@@ -251,7 +282,7 @@ export default function RoomsDashboardPage() {
 
   const toggleModal = (key: keyof typeof modals, val: boolean) => {
     setModals((prev) => ({ ...prev, [key]: val }));
-    if (!val && (key === 'new' || key === 'edit')) resetForm();
+    if (!val && (key === "new" || key === "edit")) resetForm();
   };
 
   function resetForm() {
@@ -260,14 +291,18 @@ export default function RoomsDashboardPage() {
     setSelectedRoom(null);
   }
 
-  function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleInputChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   function toggleTagSelection(tag_id: string) {
     setSelectedTagIds((prev) =>
-      prev.includes(tag_id) ? prev.filter((t) => t !== tag_id) : [...prev, tag_id]
+      prev.includes(tag_id)
+        ? prev.filter((t) => t !== tag_id)
+        : [...prev, tag_id]
     );
   }
 
@@ -280,11 +315,27 @@ export default function RoomsDashboardPage() {
       description: form.description,
       city: form.city,
       price: Number(form.price) || 0,
-      area: form.area,
+      area: Number(form.area) || 0,
       address: form.address,
     };
 
-    const { data, error } = await supabase.from("rooms").insert([payload]).select().single();
+    if (
+      !form.title ||
+      !form.city ||
+      !form.area ||
+      Number(form.area) <= 0 ||
+      Number(form.price) <= 0
+    ) {
+      return toast.error(
+        "Title, City, Price (>0), Area  (>0), and Address are required."
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("rooms")
+      .insert([payload])
+      .select()
+      .single();
     if (error) return toast.error("Error creating room: " + error.message);
 
     if (selectedTagIds.length) {
@@ -297,7 +348,7 @@ export default function RoomsDashboardPage() {
 
     toast.success("Room created successfully");
     await fetchRooms();
-    toggleModal('new', false);
+    toggleModal("new", false);
   }
 
   async function startEdit(room: Room) {
@@ -315,7 +366,7 @@ export default function RoomsDashboardPage() {
 
     const sel = (room.rooms_tags || []).map((rt) => rt.tag_id);
     setSelectedTagIds(sel);
-    toggleModal('edit', true);
+    toggleModal("edit", true);
   }
 
   async function updateRoom() {
@@ -328,7 +379,10 @@ export default function RoomsDashboardPage() {
       address: form.address,
     };
 
-    const { error } = await supabase.from("rooms").update(payload).eq("id", form.id);
+    const { error } = await supabase
+      .from("rooms")
+      .update(payload)
+      .eq("id", form.id);
     if (error) return toast.error("Update error: " + error.message);
 
     // Sync tags
@@ -343,11 +397,16 @@ export default function RoomsDashboardPage() {
 
     toast.success("Room updated");
     await fetchRooms();
-    toggleModal('edit', false);
+    toggleModal("edit", false);
   }
 
   async function deleteRoom(id: string) {
     if (!confirm("Are you sure you want to delete this room?")) return;
+    const formData = new FormData();
+    formData.append("action", "delete-all");
+    formData.append("idRoom", selectedRoom.id);
+
+    await fetch("/api/room_img", { method: "DELETE", body: formData });
     await supabase.from("room_images").delete().eq("room_id", id);
     await supabase.from("rooms_tags").delete().eq("room_id", id);
     await supabase.from("bookings").delete().eq("room_id", id);
@@ -358,32 +417,59 @@ export default function RoomsDashboardPage() {
 
   async function createTag() {
     if (!newTagName) return;
-    const { error } = await supabase.from("tags").insert([
-      { name: newTagName, value_type: newTagCategory, value: newTagName },
-    ]);
+    const { error } = await supabase
+      .from("tags")
+      .insert([
+        { name: newTagName, value_type: newTagCategory, value: newTagName },
+      ]);
     if (error) return toast.error(error.message);
     setNewTagName("");
     await fetchTags();
     toast.success("Tag created");
   }
 
-  // --- Image & Booking Handlers ---
+  // --- Image & Verification & Booking Handlers ---
   async function openImages(room: Room) {
     setSelectedRoom(room);
-    const { data } = await supabase.from("room_images").select("*").eq("room_id", room.id).order("order_index");
+    const { data } = await supabase
+      .from("room_images")
+      .select("*")
+      .eq("room_id", room.id)
+      .order("order_index");
     setRoomImages(data || []);
-    toggleModal('images', true);
+    toggleModal("images", true);
   }
 
   async function uploadImage(file?: File) {
     if (!selectedRoom || !file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("idRoom", selectedRoom.id);
+
     try {
-      const res = await fetch("/api/room_img", { method: "POST", body: formData });
+      const { data: rowData, error: insertError } = await supabase
+        .from("room_images")
+        .insert([{ room_id: selectedRoom.id, img_url: "" }])
+        .select("id")
+        .single();
+
+      if (insertError || !rowData)
+        throw insertError || new Error("Cannot create image row");
+
+      const img_id = rowData.id;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("idRoom", selectedRoom.id);
+      formData.append("img_id", img_id);
+
+      const res = await fetch("/api/room_img", {
+        method: "POST",
+        body: formData,
+      });
+
       const data = await res.json();
-      await supabase.from("room_images").insert([{ room_id: selectedRoom.id, img_url: data.url }]);
+      await supabase
+        .from("room_images")
+        .update({ img_url: data.url })
+        .eq("id", img_id);
+
       setRoomImages(await fetchRoomImages(selectedRoom.id));
       await fetchRooms();
       toast.success("Uploaded");
@@ -393,7 +479,11 @@ export default function RoomsDashboardPage() {
   }
 
   async function fetchRoomImages(roomId: string) {
-    const { data } = await supabase.from("room_images").select("*").eq("room_id", roomId).order("order_index");
+    const { data } = await supabase
+      .from("room_images")
+      .select("*")
+      .eq("room_id", roomId)
+      .order("order_index");
     return data || [];
   }
 
@@ -404,7 +494,86 @@ export default function RoomsDashboardPage() {
     formData.append("idRoom", selectedRoom.id);
     formData.append("img_id", imgId);
     await fetch("/api/room_img", { method: "DELETE", body: formData });
+    await supabase.from("room_images").delete().eq("id", imgId);
     setRoomImages(await fetchRoomImages(selectedRoom.id));
+    await fetchRooms();
+    toast.success("Deleted");
+  }
+
+  async function openVerifications(room: Room) {
+    setSelectedRoom(room);
+    const { data } = await supabase
+      .from("verifications")
+      .select("*")
+      .eq("room_id", room.id)
+      .order("verified");
+    setVerification(data || []);
+    toggleModal("verification", true);
+  }
+
+  async function uploadVerifications(file?: File) {
+    if (!selectedRoom || !file) return;
+
+    try {
+      const { data: rowData, error: insertError } = await supabase
+        .from("verifications")
+        .insert([
+          {
+            room_id: selectedRoom.id,
+            landlord_id: idUser,
+            verified: false,
+            proof: null,
+          },
+        ])
+        .select("id")
+        .single();
+
+      if (insertError || !rowData)
+        throw insertError || new Error("Cannot create image row");
+
+      const verification_id = rowData.id;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("idRoom", selectedRoom.id);
+      formData.append("verification_id", verification_id);
+
+      const res = await fetch("/api/verification", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      await supabase
+        .from("verifications")
+        .update({ proof: data.url })
+        .eq("id", verification_id);
+
+      setVerification(await fetchVerifications(selectedRoom.id));
+      await fetchRooms();
+      toast.success("Uploaded");
+    } catch {
+      toast.error("Upload failed");
+    }
+  }
+
+  async function fetchVerifications(roomId: string) {
+    const { data } = await supabase
+      .from("verifications")
+      .select("*")
+      .eq("room_id", roomId)
+      .order("verified");
+    return data || [];
+  }
+
+  async function deleteVerifications(veriID: string) {
+    if (!selectedRoom || !confirm("Delete verification?")) return;
+    const formData = new FormData();
+    formData.append("action", "delete-one");
+    formData.append("idRoom", selectedRoom.id);
+    formData.append("verification_id", veriID);
+    await fetch("/api/verification", { method: "DELETE", body: formData });
+    await supabase.from("verifications").delete().eq("id", veriID);
+    setVerification(await fetchVerifications(selectedRoom.id));
     await fetchRooms();
     toast.success("Deleted");
   }
@@ -413,11 +582,11 @@ export default function RoomsDashboardPage() {
     setSelectedRoom(room);
     const { data } = await supabase
       .from("bookings")
-      .select("*, users(name, email)")
+      .select("*, users(name, email, phone_number)")
       .eq("room_id", room.id)
       .order("created_at", { ascending: false });
     setBookings((data as unknown as Booking[]) || []);
-    toggleModal('bookings', true);
+    toggleModal("bookings", true);
   }
 
   async function updateBookingStatus(bid: string, status: string) {
@@ -428,25 +597,37 @@ export default function RoomsDashboardPage() {
 
   // --- Render ---
 
-  if (loading) return <div className="p-6 pt-32 animate-pulse text-gray-500">Loading Dashboard...</div>;
+  if (loading)
+    return (
+      <div className="p-6 pt-32 animate-pulse text-gray-500">
+        Loading Dashboard...
+      </div>
+    );
 
   return (
     <div className="p-6 pt-32 bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Rooms Management</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage your listings, bookings, and content.</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+            Rooms Management
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            Manage your listings, bookings, and content.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Btn
-            onClick={() => { resetForm(); toggleModal('new', true); }}
+            onClick={() => {
+              resetForm();
+              toggleModal("new", true);
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white border-transparent"
           >
             + New Room
           </Btn>
           <Btn
-            onClick={() => toggleModal('tags', true)}
+            onClick={() => toggleModal("tags", true)}
             className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200"
           >
             Manage Tags
@@ -463,7 +644,10 @@ export default function RoomsDashboardPage() {
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {rooms.map((r) => (
-          <div key={r.id} className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+          <div
+            key={r.id}
+            className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+          >
             <div className="h-48 w-full bg-gray-200 dark:bg-gray-700 relative overflow-hidden">
               {r.room_images?.[0]?.img_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -484,22 +668,56 @@ export default function RoomsDashboardPage() {
             </div>
 
             <div className="p-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-1">{r.title}</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1">📍 {r.city}</p>
-              
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-1">
+                {r.title}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1">
+                📍 {r.city}
+              </p>
+
               <div className="flex flex-wrap gap-1 mb-4 h-6 overflow-hidden">
                 {(r.rooms_tags || []).slice(0, 4).map((rt) => (
-                  <span key={rt.tag_id} className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded border dark:border-gray-600">
+                  <span
+                    key={rt.tag_id}
+                    className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded border dark:border-gray-600"
+                  >
                     {rt.tags?.name}
                   </span>
                 ))}
               </div>
 
               <div className="grid grid-cols-2 gap-2 mt-auto">
-                <Btn onClick={() => startEdit(r)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">Edit</Btn>
-                <Btn onClick={() => openImages(r)} className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">Photos</Btn>
-                <Btn onClick={() => openBookings(r)} className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400">Bookings</Btn>
-                <Btn onClick={() => deleteRoom(r.id)} className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">Delete</Btn>
+                <Btn
+                  onClick={() => startEdit(r)}
+                  className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                >
+                  Edit
+                </Btn>
+                <Btn
+                  onClick={() => openImages(r)}
+                  className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400"
+                >
+                  Photos
+                </Btn>
+                <Btn
+                  onClick={() => openBookings(r)}
+                  className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400"
+                >
+                  Bookings
+                </Btn>
+                <Btn
+                  // --- Bổ sung: Nút Verification ---
+                  onClick={() => openVerifications(r)}
+                  className="bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                >
+                  Verification
+                </Btn>
+                <Btn
+                  onClick={() => deleteRoom(r.id)}
+                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 col-span-2"
+                >
+                  Delete
+                </Btn>
               </div>
             </div>
           </div>
@@ -507,11 +725,17 @@ export default function RoomsDashboardPage() {
       </div>
 
       {/* --- CREATE MODAL --- */}
-      <Sheet open={modals.new} onClose={() => toggleModal('new', false)} title="Create New Room">
+      <Sheet
+        open={modals.new}
+        onClose={() => toggleModal("new", false)}
+        title="Create New Room"
+      >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Title
+              </label>
               <input
                 name="title"
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
@@ -521,7 +745,9 @@ export default function RoomsDashboardPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">City</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                City
+              </label>
               <input
                 name="city"
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
@@ -531,7 +757,9 @@ export default function RoomsDashboardPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Description
+            </label>
             <textarea
               name="description"
               rows={4}
@@ -542,7 +770,9 @@ export default function RoomsDashboardPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Price</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Price
+              </label>
               <input
                 name="price"
                 type="number"
@@ -552,7 +782,9 @@ export default function RoomsDashboardPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Area</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Area
+              </label>
               <input
                 name="area"
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
@@ -561,7 +793,9 @@ export default function RoomsDashboardPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Address
+              </label>
               <input
                 name="address"
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
@@ -571,18 +805,38 @@ export default function RoomsDashboardPage() {
             </div>
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Features</label>
-            <TagSelector groupedTags={groupedTags} selectedTagIds={selectedTagIds} onToggle={toggleTagSelection} />
+            <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Features
+            </label>
+            <TagSelector
+              groupedTags={groupedTags}
+              selectedTagIds={selectedTagIds}
+              onToggle={toggleTagSelection}
+            />
           </div>
           <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
-            <Btn onClick={createRoom} className="flex-1 bg-green-600 hover:bg-green-700 text-white">Create Room</Btn>
-            <Btn onClick={() => toggleModal('new', false)} className="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white">Cancel</Btn>
+            <Btn
+              onClick={createRoom}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+            >
+              Create Room
+            </Btn>
+            <Btn
+              onClick={() => toggleModal("new", false)}
+              className="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white"
+            >
+              Cancel
+            </Btn>
           </div>
         </div>
       </Sheet>
 
       {/* --- EDIT MODAL --- */}
-      <Sheet open={modals.edit} onClose={() => toggleModal('edit', false)} title="Edit Room">
+      <Sheet
+        open={modals.edit}
+        onClose={() => toggleModal("edit", false)}
+        title="Edit Room"
+      >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -646,17 +900,35 @@ export default function RoomsDashboardPage() {
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium">Features</label>
-            <TagSelector groupedTags={groupedTags} selectedTagIds={selectedTagIds} onToggle={toggleTagSelection} />
+            <TagSelector
+              groupedTags={groupedTags}
+              selectedTagIds={selectedTagIds}
+              onToggle={toggleTagSelection}
+            />
           </div>
           <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
-            <Btn onClick={updateRoom} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">Save Changes</Btn>
-            <Btn onClick={() => toggleModal('edit', false)} className="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white">Cancel</Btn>
+            <Btn
+              onClick={updateRoom}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Save Changes
+            </Btn>
+            <Btn
+              onClick={() => toggleModal("edit", false)}
+              className="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white"
+            >
+              Cancel
+            </Btn>
           </div>
         </div>
       </Sheet>
 
       {/* --- TAGS MODAL --- */}
-      <Sheet open={modals.tags} onClose={() => toggleModal('tags', false)} title="Manage Tags">
+      <Sheet
+        open={modals.tags}
+        onClose={() => toggleModal("tags", false)}
+        title="Manage Tags"
+      >
         <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700">
           <h4 className="text-sm font-semibold mb-3">Add New Tag</h4>
           <div className="flex flex-col gap-3">
@@ -672,38 +944,65 @@ export default function RoomsDashboardPage() {
                 onChange={(e) => setNewTagCategory(e.target.value)}
                 className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
-                {availableCategories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-                {!availableCategories.includes("Amenities") && <option value="Amenities">Amenities</option>}
+                {availableCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                {!availableCategories.includes("Amenities") && (
+                  <option value="Amenities">Amenities</option>
+                )}
               </select>
             </div>
-            <Btn onClick={createTag} className="bg-blue-600 text-white w-full">Add Tag</Btn>
+            <Btn onClick={createTag} className="bg-blue-600 text-white w-full">
+              Add Tag
+            </Btn>
           </div>
         </div>
-        <TagSelector groupedTags={groupedTags} selectedTagIds={[]} onToggle={() => {}} readonly />
+        <TagSelector
+          groupedTags={groupedTags}
+          selectedTagIds={[]}
+          onToggle={() => {}}
+          readonly
+        />
       </Sheet>
 
       {/* --- IMAGES MODAL --- */}
-      <Sheet open={modals.images} onClose={() => toggleModal('images', false)} title="Gallery">
+      <Sheet
+        open={modals.images}
+        onClose={() => toggleModal("images", false)}
+        title="Gallery"
+      >
         <div className="mb-6">
-          <Btn onClick={() => fileInputRef.current?.click()} className="w-full bg-blue-600 text-white flex justify-center gap-2 py-3">
+          <Btn
+            onClick={() => fileInputRefImages.current?.click()}
+            className="w-full bg-blue-600 text-white flex justify-center gap-2 py-3"
+          >
             <span>☁️</span> Upload New Image
           </Btn>
           <input
-            ref={fileInputRef}
+            ref={fileInputRefImages}
             type="file"
             accept="image/*"
             className="hidden"
             onChange={async (e) => {
               const f = e.target.files?.[0];
               if (f) await uploadImage(f);
-              if (fileInputRef.current) fileInputRef.current.value = "";
+              if (fileInputRefImages.current) fileInputRefImages.current.value = "";
             }}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           {roomImages.map((img) => (
-            <div key={img.id} className="relative group border rounded-lg overflow-hidden dark:border-gray-700">
-              <img src={img.img_url} alt="room" className="w-full h-40 object-cover" />
+            <div
+              key={img.id}
+              className="relative group border rounded-lg overflow-hidden dark:border-gray-700"
+            >
+              <img
+                src={img.img_url}
+                alt="room"
+                className="w-full h-40 object-cover"
+              />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <button
                   onClick={() => deleteImage(img.id)}
@@ -714,39 +1013,160 @@ export default function RoomsDashboardPage() {
               </div>
             </div>
           ))}
-          {roomImages.length === 0 && <div className="col-span-2 text-center py-10 text-gray-500">No images yet.</div>}
+          {roomImages.length === 0 && (
+            <div className="col-span-2 text-center py-10 text-gray-500">
+              No images yet.
+            </div>
+          )}
         </div>
       </Sheet>
 
       {/* --- BOOKINGS MODAL --- */}
-      <Sheet open={modals.bookings} onClose={() => toggleModal('bookings', false)} title="Bookings History">
+      <Sheet
+        open={modals.bookings}
+        onClose={() => toggleModal("bookings", false)}
+        title="Bookings History"
+      >
         <div className="space-y-4">
-          {bookings.length === 0 && <div className="text-center py-10 text-gray-500">No bookings found.</div>}
+          {bookings.length === 0 && (
+            <div className="text-center py-10 text-gray-500">
+              No bookings found.
+            </div>
+          )}
           {bookings.map((b) => (
-            <div key={b.id} className="border rounded-lg p-4 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+            <div
+              key={b.id}
+              className="border rounded-lg p-4 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm"
+            >
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h5 className="font-bold text-gray-900 dark:text-white">{b.users?.name || "Unknown"}</h5>
+                  <h5 className="font-bold text-gray-900 dark:text-white">
+                    {b.users?.name || "Unknown"}
+                  </h5>
                   <p className="text-xs text-gray-500">{b.users?.email}</p>
+                  <p className="text-xs text-gray-500">
+                    {b.users?.phone_number}
+                  </p>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-bold capitalize ${
-                  b.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                  b.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                }`}>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-bold capitalize ${
+                    b.status === "confirmed"
+                      ? "bg-green-100 text-green-700"
+                      : b.status === "cancelled"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-yellow-100 text-yellow-700"
+                  }`}
+                >
                   {b.status}
                 </span>
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1 my-3">
-                <div className="flex justify-between"><span>Check-in:</span><span className="font-medium">{new Date(b.start_time).toLocaleDateString()}</span></div>
-                <div className="flex justify-between"><span>Check-out:</span><span className="font-medium">{new Date(b.end_time).toLocaleDateString()}</span></div>
-                <div className="flex justify-between border-t pt-1"><span>Total:</span><span className="font-bold text-blue-600">{b.total_price?.toLocaleString()} VND</span></div>
+                <div className="flex justify-between">
+                  <span>Check-in:</span>
+                  <span className="font-medium">
+                    {new Date(b.start_time).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Check-out:</span>
+                  <span className="font-medium">
+                    {new Date(b.end_time).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t pt-1">
+                  <span>Total:</span>
+                  <span className="font-bold text-blue-600">
+                    {b.total_price?.toLocaleString()} VND
+                  </span>
+                </div>
               </div>
               <div className="flex gap-2 mt-3 pt-3 border-t">
-                <button onClick={() => updateBookingStatus(b.id, "confirmed")} className="flex-1 py-1.5 text-xs bg-green-50 text-green-700 rounded">Confirm</button>
-                <button onClick={() => updateBookingStatus(b.id, "cancelled")} className="flex-1 py-1.5 text-xs bg-red-50 text-red-700 rounded">Cancel</button>
+                <button
+                  onClick={() => updateBookingStatus(b.id, "confirmed")}
+                  className="flex-1 py-1.5 text-xs bg-green-50 text-green-700 rounded"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => updateBookingStatus(b.id, "cancelled")}
+                  className="flex-1 py-1.5 text-xs bg-red-50 text-red-700 rounded"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           ))}
+        </div>
+      </Sheet>
+      {/* --- VERIFICATION MODAL --- */}
+      <Sheet
+        open={modals.verification}
+        onClose={() => toggleModal("verification", false)}
+        title="Verification Documents"
+      >
+        <div className="mb-6">
+          <Btn
+            onClick={() => fileInputRefVerification.current?.click()}
+            className="w-full bg-purple-600 text-white flex justify-center gap-2 py-3"
+          >
+            <span>📜</span> Upload New Proof
+          </Btn>
+          <input
+            ref={fileInputRefVerification}
+            type="file"
+            accept="image/*,.pdf"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (f) await uploadVerifications(f);
+              if (fileInputRefVerification.current) fileInputRefVerification.current.value = "";
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          {verification.map((v) => (
+            <div
+              key={v.id}
+              className="flex justify-between items-center p-3 border rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl">
+                  {v.proof.endsWith(".pdf") ? "📄" : "🖼️"}
+                </span>
+                <div className="flex flex-col">
+                  <a
+                    href={v.proof}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline line-clamp-1"
+                    title={v.proof.split("/").pop()}
+                  >
+                    {v.proof.split("/").pop() || "Document"}
+                  </a>
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      v.verified
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {v.verified ? "Verified" : "Pending"}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => deleteVerifications(v.id)}
+                className="bg-red-600 text-white px-3 py-1 rounded text-xs shadow-lg hover:bg-red-700 active:scale-95"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+          {verification.length === 0 && (
+            <div className="col-span-1 text-center py-10 text-gray-500">
+              No verification documents uploaded.
+            </div>
+          )}
         </div>
       </Sheet>
     </div>

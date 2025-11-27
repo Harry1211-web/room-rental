@@ -67,20 +67,38 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  try {
     const formData = await req.formData();
     const reportId = formData.get("reportId") as string;
-    const filename = formData.get("filename") as string;
 
-  if (!reportId || !filename) {
-    return NextResponse.json({ error: "Missing reportId or filename" }, { status: 400 });
+    if (!reportId) {
+      return NextResponse.json({ error: "Missing reportId" }, { status: 400 });
+    }
+
+    const { data: files, error: listError } = await supabaseAdmin.storage
+      .from("proof")
+      .list(reportId + "/");
+
+    if (listError) throw listError;
+
+    if (!files || files.length === 0) {
+      return NextResponse.json({ success: true, message: "No files to delete" });
+    }
+
+    const paths = files.map((f) => `${reportId}/${f.name}`);
+    const { error: removeError } = await supabaseAdmin.storage.from("proof").remove(paths);
+
+    if (removeError) throw removeError;
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.error("Delete folder error:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
   }
-
-  const path = `${reportId}/${filename}`;
-
-  const { error } = await supabaseAdmin.storage.from("proof").remove([path]);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({ success: true });
 }
+
 

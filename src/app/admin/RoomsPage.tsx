@@ -186,13 +186,37 @@ export default function RoomsPage() {
     fetchTags();
   };
 
-  const deleteRoom = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this room?")) return;
-    const { error } = await supabase.from("rooms").delete().eq("id", id);
-    if (error) return toast.error("Unable to delete room!");
-    toast.success("Deleted room!");
-    fetchRooms();
-  };
+const deleteRoom = async (id: string) => {
+  if (!confirm("Are you sure you want to delete this room?")) return;
+
+  try {
+    // 1. Xóa record trong bảng rooms
+    const { error: dbError } = await supabase.from("rooms").delete().eq("id", id);
+    if (dbError) throw dbError;
+
+    // 2. Xóa tất cả hình ảnh liên quan bằng cách gọi API route /api/room_img
+    const formData = new FormData();
+    formData.append("action", "delete-all");
+    formData.append("idRoom", id);
+
+    const res = await fetch("/api/room_img", {
+      method: "DELETE",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || "Failed to delete room images.");
+    }
+
+    toast.success("Room and all associated images deleted successfully!");
+    fetchRooms(); // Tải lại danh sách phòng
+    
+  } catch (error) {
+    console.error("Error deleting room:", error);
+    toast.error(`Unable to delete room! ${error instanceof Error ? error.message : "An unknown error occurred."}`);
+  }
+};
 
   useEffect(() => {
     fetchRooms();

@@ -54,14 +54,14 @@ export async function DELETE(req: NextRequest) {
       }
 
       const { data: files } = await supabaseAdmin.storage
-        .from("avatars")
+        .from("room_images")
         .list(img_id + "/");
 
       if (!files || files.length === 0) {
         return NextResponse.json({ success: true }); // Không có gì để xóa
       }
       const paths = files.map((f) => `${img_id}/${f.name}`);
-      await supabaseAdmin.storage.from("avatars").remove(paths);
+      await supabaseAdmin.storage.from("room_images").remove(paths);
 
       return NextResponse.json({ success: true });
     }
