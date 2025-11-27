@@ -235,7 +235,7 @@ export default function UserPage() {
 
       // 3️⃣ Delete avatar
       if (user.avatar_url) {
-        await fetch("/api/storage/avatar", {
+        await fetch("/api/avatar", {
           method: "DELETE",
           body: (() => {
             const formData = new FormData();
