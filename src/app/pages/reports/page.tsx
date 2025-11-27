@@ -15,16 +15,16 @@ interface Report {
     title: string;
     address: string;
     city: string;
-  };
+  }[];
   targeted_user?: {
     name: string;
-  };
+  }[];
 }
 
 export default function ReportHistory() {
-  const { idUser } = useUser();
+  const { idUser, setLoading } = useUser();
   const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading1] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export default function ReportHistory() {
 
     if (statusFilter !== "all") query.eq("status", statusFilter);
 
-    if (offsetRef.current === 0) setLoading(true);
+    if (offsetRef.current === 0) setLoading1(true);
     else setLoadingMore(true);
 
     const { data, error } = await query;
@@ -65,11 +65,22 @@ export default function ReportHistory() {
     if (error) console.error("Error fetching reports:", error);
     else {
       if (data.length < limit) setHasMore(false);
-      setReports((prev) => (reset ? data : [...prev, ...data]));
+      
+      //Transform the data to match the Report interface
+      setReports((prev) => {
+        const newData = data.map(item => ({
+          ...item,
+          //Keep as arrays since that's what Supabase returns
+          rooms: item.rooms || [],
+          targeted_user: item.targeted_user || []
+        }));
+        return reset ? newData : [...prev, ...newData];
+      });
+      
       offsetRef.current += data.length;
     }
 
-    setLoading(false);
+    setLoading1(false);
     setLoadingMore(false);
   };
 
@@ -77,7 +88,11 @@ export default function ReportHistory() {
     if (idUser) fetchReports(true);
   }, [idUser, statusFilter]);
 
-  // Infinite scroll listener
+  useEffect(() => {
+    if(loading) setLoading(false)
+  }, [loading, setLoading]);
+
+  //Infinite scroll listener
   useEffect(() => {
     const handleScroll = () => {
       if (
@@ -99,12 +114,22 @@ export default function ReportHistory() {
         Reports You Submitted
       </h1>
 
-      {/* ✅ Filter dropdown luôn hiện, không mất khi loading */}
-      <div className="flex justify-end mb-4 sticky top-24 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-sm">
+      {/* Filter dropdown */}
+      <div
+        className="flex justify-end mb-4 sticky top-24 
+                    bg-white/80 dark:bg-gray-900/60 
+                      backdrop-blur-sm p-2 rounded-lg shadow-sm"
+      >
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="
+          border border-gray-300 dark:border-gray-600
+          bg-white dark:bg-gray-800 
+          text-gray-900 dark:text-gray-100
+          rounded-lg px-3 py-2 text-sm
+          focus:outline-none focus:ring-2 focus:ring-blue-500
+        "
         >
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
@@ -113,13 +138,13 @@ export default function ReportHistory() {
         </select>
       </div>
 
-      {/* Nếu đang loading */}
+      {/* If loading */}
       {loading ? (
         <p className="text-center mt-10 text-gray-500">Loading reports...</p>
       ) : reports.length === 0 ? (
         <div className="text-center text-gray-600">
           <h2 className="text-xl font-semibold mb-2">No reports found</h2>
-          <p>You haven't submitted any reports yet.</p>
+          <p>You haven&apos;t submitted any reports yet.</p>
         </div>
       ) : (
         <>
@@ -157,27 +182,31 @@ export default function ReportHistory() {
                   Submitted on {new Date(r.created_at).toLocaleString()}
                 </p>
 
-                {r.rooms && (
+                {/*Access array data properly */}
+                {r.rooms && r.rooms.length > 0 && (
                   <div>
-                    <h2 className="text-lg font-semibold">{r.rooms.title}</h2>
-                    <p className="text-gray-700">
-                      {r.rooms.address}, {r.rooms.city}
+                    <h2 className="text-lg font-semibold dark:text-gray-700">
+                      {r.rooms[0].title}
+                    </h2>
+                    <p className="text-gray-700 dark:text-gray-700">
+                      {r.rooms[0].address}, {r.rooms[0].city}
                     </p>
                   </div>
                 )}
 
-                {r.targeted_user && (
-                  <p>
-                    <strong>Targeted user:</strong> {r.targeted_user.name}
+                {/*Access array data properly */}
+                {r.targeted_user && r.targeted_user.length > 0 && (
+                  <p className="dark:text-gray-700">
+                    <strong>Targeted user:</strong> {r.targeted_user[0].name}
                   </p>
                 )}
 
-                <p>
+                <p className="dark:text-gray-700">
                   <strong>Reason:</strong> {r.reason || "No reason provided"}
                 </p>
 
                 <div>
-                  <strong>Status:</strong>{" "}
+                  <strong className="dark:text-gray-700">Status:</strong>{" "}
                   <span
                     className={`${
                       r.status === "resolved"

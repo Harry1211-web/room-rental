@@ -1,43 +1,69 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 import ForgotForm from "./ForgotForm";
 
-export default function AuthPage() {
+function AuthContent() {
+  const { setLoading } = useUser();
+  const router = useRouter();
   const { setUserFromServer } = useUser();
   const searchParams = useSearchParams();
   const modeParam = searchParams.get("mode");
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
 
-  // Dark mode state
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    // Detect system dark mode preference
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
     setIsDarkMode(prefersDark);
-    
-    // Optionally, you can persist this setting
-    // localStorage.setItem("theme", prefersDark ? "dark" : "light");
   }, []);
 
   useEffect(() => {
-    if (modeParam === "register" || modeParam === "forgot" || modeParam === "login") {
+    if (
+      modeParam === "register" ||
+      modeParam === "forgot" ||
+      modeParam === "login"
+    ) {
       setMode(modeParam);
     }
   }, [modeParam]);
 
-  const resetFormAndErrors = (newMode: "login" | "register" | "forgot") => {
+  const changeModeAndSyncUrl = (newMode: "login" | "register" | "forgot") => {
     setMode(newMode);
+
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    newSearchParams.set("mode", newMode);
+
+    router.replace(`?${newSearchParams.toString()}`, { scroll: false });
   };
+
+  const getBackgroundUrl = () => {
+    switch (mode) {
+      case "login":
+        return "url('/bg-login.png')";
+      case "register":
+        return "url('/bg-register.png')";
+      case "forgot":
+        return "url('/bg-forgot.png')";
+      default:
+        return "none";
+    }
+  };
+
+  const backgroundClasses = `bg-cover bg-center transition-all duration-500 ease-in-out`;
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-6 dark:bg-gray-900 dark:from-gray-800 dark:to-gray-900`}
+      className={`min-h-screen flex items-center justify-center p-6 ${backgroundClasses}`}
+      style={{
+        backgroundImage: getBackgroundUrl(),
+      }}
     >
       <div
         className={`bg-white shadow-lg rounded-2xl p-8 w-full max-w-md relative overflow-hidden dark:bg-gray-800`}
@@ -67,16 +93,32 @@ export default function AuthPage() {
 
         <AnimatePresence mode="wait">
           {mode === "login" && (
-            <LoginForm setMode={resetFormAndErrors} setUserFromServer={setUserFromServer} />
+            <LoginForm
+              setMode={changeModeAndSyncUrl}
+              setUserFromServer={setUserFromServer}
+            />
           )}
           {mode === "register" && (
-            <RegisterForm setMode={resetFormAndErrors} />
+            <RegisterForm setMode={changeModeAndSyncUrl} />
           )}
-          {mode === "forgot" && (
-            <ForgotForm setMode={resetFormAndErrors} />
-          )}
+          {mode === "forgot" && <ForgotForm setMode={changeModeAndSyncUrl} />}
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    // <Suspense fallback={
+    //   <div className="min-h-screen flex items-center justify-center">
+    //     <div className="text-center">
+    //       <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+    //       <p className="text-gray-600">Loading authentication...</p>
+    //     </div>
+    //   </div>
+    // }>
+    <AuthContent />
+    // </Suspense>
   );
 }

@@ -58,17 +58,17 @@ export function EditablePopup<T extends object>({
             const isReadOnly = globalReadOnly || f.readOnly;
             return (
               <div key={String(f.key)} className="flex flex-col gap-1">
-                <label className="text-sm font-medium">{f.label}</label>
+                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">{f.label}</label>
 
                 {isReadOnly ? (
-                  <div className="px-2 py-1 text-sm border rounded bg-gray-50">
+                  <div className="px-2 py-1 text-sm border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                     {String(formData[f.key] ?? "")}
                   </div>
                 ) : f.type === "select" && f.options ? (
                   <select
                     value={(formData[f.key] as string) ?? ""}
                     onChange={(e) => handleChange(f.key, e.target.value as T[keyof T])}
-                    className="border rounded px-2 py-1 text-sm"
+                    className="border dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                   >
                     {f.options.map((o) =>
                       typeof o === "string" ? (
@@ -94,7 +94,7 @@ export function EditablePopup<T extends object>({
                           : e.target.value) as T[keyof T]
                       )
                     }
-                    className="border rounded px-2 py-1 text-sm"
+                    className="border dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                   />
                 )}
               </div>

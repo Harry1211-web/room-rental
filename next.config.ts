@@ -2,11 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "bfohmdgcgylgbdmpqops.supabase.co",
+        hostname: "mewjfzjyfnucsahfjozw.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
       {

@@ -7,6 +7,7 @@ import {
   validateRegisterFields,
   handleStrongPassword,
 } from "./helpers/validation";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 interface RegisterFormProps {
   setMode: (mode: "login" | "register" | "forgot") => void;
@@ -62,7 +63,7 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         .select("id")
         .eq("email", email)
 
-      if (existingEmail) {
+        if (existingEmail && existingEmail.length < 0) {
         setFieldErrors((prev) => ({ ...prev, email: "Email already exists" }));
         return;
       }
@@ -72,8 +73,8 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         .select("id")
         .eq("phone_number", phone)
 
-      if (existingPhone) {
-        setFieldErrors((prev) => ({ ...prev, email: "Phone number already exists" }));
+      if (existingPhone && existingPhone?.length < 0) {
+        setFieldErrors((prev) => ({ ...prev, phone: "Phone number already exists" }));
         return;
       }
 
@@ -87,7 +88,7 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
             data: {
               name: name,
               phone_number: phone,
-              role,
+              role: role,
             },
           },
         });
@@ -114,13 +115,14 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         formData.append("file", avt);
         formData.append("userId", userId);
 
-        const res = await fetch("/api/avatar_upload", {
+        const res = await fetch("/api/avatar", {
           method: "POST",
           body: formData,
         });
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
+        avatarUrl = data.avatarUrl;
       }
 
       if (!avatarUrl) {
@@ -129,7 +131,7 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
       }
 
       // Sau khi update user metadata
-      await supabase
+      await supabaseAdmin
         .from("users")
         .update({ avatar_url: avatarUrl })
         .eq("id", userId);

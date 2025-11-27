@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Eye, EyeOff } from 'lucide-react'
 
 interface LoginFormProps {
   setMode: (mode: "login" | "register" | "forgot") => void;
@@ -14,6 +15,7 @@ export default function LoginForm({
   setUserFromServer,
 }: LoginFormProps) {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -99,13 +101,25 @@ export default function LoginForm({
         <p className="text-red-500 text-sm">{fieldErrors.email}</p>
       )}
 
-      <input
-        type="password"
-        placeholder="Password"
-        className="w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          placeholder="Password"
+          className="w-full border p-2 pr-10 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        {/* Toggle */}
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-300"
+        >
+          {showPassword ? <Eye /> : <EyeOff />}
+        </button>
+      </div>
+
       {fieldErrors.password && (
         <p className="text-red-500 text-sm">{fieldErrors.password}</p>
       )}

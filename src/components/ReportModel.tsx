@@ -92,7 +92,7 @@ export default function ReportModal({
       formData.append("reportId", reportId);
       formData.append("file", proofFile);
 
-      const res = await fetch("/api/proof_upload", {
+      const res = await fetch("/api/proof", {
         method: "POST",
         body: formData,
       });
