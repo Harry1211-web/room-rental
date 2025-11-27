@@ -15,7 +15,7 @@ import { NavbarAdvancedSearchContainer } from "./NavbarAdvancedSearchContainer";
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { idUser, role, loading, logout, setLoading } = useUser();
+  const { idUser, role, loading, logout, setLoading, avatarUrl } = useUser(); // Added avatarUrl from context
 
   const [dropdownMenuOpen, setDropdownMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -139,14 +139,15 @@ export default function Navbar() {
                     onClick={toggleDropdown}
                   >
                     <Image
-                      src={
-                        localStorage.getItem("avatar_url") ||
-                        "/avatar_default.jpg"
-                      }
+                      src={avatarUrl || "/avatar_default.jpg"} // Use avatarUrl from context
                       alt="Avatar"
                       width={40}
                       height={40}
                       className="rounded-full ring-1 ring-gray-300 dark:ring-gray-600 transition-all duration-300"
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        e.currentTarget.src = "/avatar_default.jpg";
+                      }}
                     />
                     <span className="font-medium text-gray-800 dark:text-gray-100 transition-colors duration-300">
                       {role}

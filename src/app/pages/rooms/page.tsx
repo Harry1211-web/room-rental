@@ -1,44 +1,83 @@
 // app/dashboard/rooms/page.tsx
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
 import { toast } from "sonner";
 
 /**
- * Single-file dashboard for Rooms + Tags + Images + Bookings
- *
- * Converted views -> Slide-in Sheets (from right)
- * UI and logic preserved (only render flow changed)
+ * Rooms Dashboard
+ * Schema-Aligned Version
  */
 
-const BUCKET = "room_images";
+// 1. Updated Interfaces to match DB Schema
+interface Tag {
+  tag_id: string;
+  name: string;
+  value_type: string; 
+  value?: string;
+  amount?: number;
+}
 
-type Room = any;
-type Tag = any;
-type Booking = any;
-type RoomImage = any;
+interface Room {
+  id: string;
+  title: string;
+  description: string;
+  city: string;
+  price: number;
+  area: string;
+  address: string;
+  average_rating: number;
+  room_images: { id: string; img_url: string; order_index: number }[];
+  rooms_tags: { tag_id: string; tags: Tag }[];
+}
+
+interface Booking {
+  id: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  total_price: number;
+  tenant_id: string;
+  users: { name: string; email: string };
+}
+
+interface RoomImage {
+  id: string;
+  img_url: string;
+}
 
 export default function RoomsDashboardPage() {
   const router = useRouter();
+  const { idUser, loading } = useUser();
+
+  // Data State
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [roomImages, setRoomImages] = useState<RoomImage[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { idUser, loading } = useUser();
-
-  // modal / sheet visibility
+  
+  // Selection State
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  
+  // UI State
   const [showNewModal, setShowNewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImagesModal, setShowImagesModal] = useState(false);
   const [showTagsModal, setShowTagsModal] = useState(false);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
+  
+  // Tag Creation State
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagCategory, setNewTagCategory] = useState("Amenities");
 
-  // Form state (used for both create and edit)
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  
+  // Form State
   const [form, setForm] = useState({
     id: "",
     landlord_id: "",
@@ -49,40 +88,89 @@ export default function RoomsDashboardPage() {
     area: "",
     address: "",
   });
+
+  // --- Initial Load & User ID Setup ---
   useEffect(() => {
     if (!loading && idUser) {
       setForm((prev) => ({ ...prev, landlord_id: idUser }));
     }
   }, [loading, idUser]);
 
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  console.log(idUser);
   useEffect(() => {
     if (loading) return;
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
+  // --- FOCUS BUG FIX ---
+  // Only focus the input when the modal opens
+  useEffect(() => {
+    if (showNewModal) {
+      // Use setTimeout to ensure the input is rendered and focusable
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+      }, 0);
+    }
+  }, [showNewModal]);
+  // --- END FOCUS BUG FIX ---
+
+
+  // -------------------------------------------
+  // Tag Grouping Logic
+  // -------------------------------------------
+  const groupedTags = useMemo(() => {
+    return tags.reduce((acc, tag) => {
+      const category = tag.value_type || "General";
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(tag);
+      return acc;
+    }, {} as Record<string, Tag[]>);
+  }, [tags]);
+
+  const availableCategories = useMemo(() => {
+    const cats = Object.keys(groupedTags);
+    return cats.length > 0 ? cats : ["Amenities", "Rules", "Safety"];
+  }, [groupedTags]);
+
   async function loadAll() {
     await Promise.all([fetchRooms(), fetchTags()]);
   }
 
-  // ---------- ROOMS ----------
+  // ---------- DATA FETCHING ----------
+
   async function fetchRooms() {
     const { data, error } = await supabase
       .from("rooms")
-      .select(
-        `
-        id, title, description, city, price, average_rating,
+      .select(`
+        id, title, description, city, price, area, address, average_rating,
         room_images(id, img_url, order_index),
-        rooms_tags(tag_id, tags(name))
-      `
-      )
+        rooms_tags(
+          tag_id, 
+          tags(tag_id, name, value_type, value)
+        )
+      `)
       .eq("landlord_id", idUser)
       .order("created_at", { ascending: false });
-    if (error) console.error("fetchRooms:", error);
-    setRooms(data || []);
+
+    if (error) {
+      console.error("fetchRooms error:", error);
+      toast.error("Failed to load rooms");
+    }
+    setRooms(data as unknown as Room[] || []);
   }
+
+  async function fetchTags() {
+    const { data, error } = await supabase
+      .from("tags")
+      .select("tag_id, name, value_type, value, amount") 
+      .order("value_type", { ascending: true })
+      .order("name", { ascending: true });
+      
+    if (error) console.error("fetchTags error:", error);
+    setTags(data as unknown as Tag[] || []);
+  }
+
+  // ---------- CRUD OPERATIONS ----------
 
   async function createRoom() {
     const payload = {
@@ -91,24 +179,30 @@ export default function RoomsDashboardPage() {
       description: form.description,
       city: form.city,
       price: Number(form.price) || 0,
-      area: Number(form.area),
+      area: form.area,
       address: form.address,
     };
+
     const { data, error } = await supabase
       .from("rooms")
       .insert([payload])
       .select()
       .single();
-    if (error) return alert("Tạo phòng lỗi: " + error.message);
+
+    if (error) return toast.error("Error creating room: " + error.message);
+    
     const roomId = data.id;
-    // attach tags
+
+    // Attach tags
     if (selectedTagIds.length) {
       const rows = selectedTagIds.map((tag_id) => ({
         room_id: roomId,
-        tag_id,
+        tag_id: tag_id,
       }));
       await supabase.from("rooms_tags").insert(rows);
     }
+    
+    toast.success("Room created successfully");
     resetForm();
     await fetchRooms();
     setShowNewModal(false);
@@ -123,10 +217,12 @@ export default function RoomsDashboardPage() {
       city: room.city || "",
       price: room.price?.toString() || "",
       landlord_id: idUser!,
-      address: room.address,
-      area: room.area,
+      address: room.address || "",
+      area: room.area || "",
     });
-    const sel = (room.rooms_tags || []).map((rt: any) => rt.tag_id);
+    
+    // Extract existing tag IDs from the join table
+    const sel = (room.rooms_tags || []).map((rt) => rt.tag_id);
     setSelectedTagIds(sel);
     setShowEditModal(true);
   }
@@ -137,36 +233,45 @@ export default function RoomsDashboardPage() {
       description: form.description,
       city: form.city,
       price: Number(form.price) || 0,
+      area: form.area,
+      address: form.address,
     };
+
     const { error } = await supabase
       .from("rooms")
       .update(payload)
       .eq("id", form.id);
-    if (error) return alert("Update lỗi: " + error.message);
 
-    // update tags: simple approach -> delete existing room_tags then insert selected
+    if (error) return toast.error("Update error: " + error.message);
+
+    // Update tags: delete all then insert new
     await supabase.from("rooms_tags").delete().eq("room_id", form.id);
+    
     if (selectedTagIds.length) {
       const rows = selectedTagIds.map((tag_id) => ({
         room_id: form.id,
-        tag_id,
+        tag_id: tag_id,
       }));
       await supabase.from("rooms_tags").insert(rows);
     }
 
+    toast.success("Room updated successfully");
     resetForm();
     await fetchRooms();
     setShowEditModal(false);
   }
 
   async function deleteRoom(id: string) {
-    if (!confirm("Xác nhận xóa phòng?")) return;
-    // delete related rows first (room_images, rooms_tags, bookings) as needed
+    if (!confirm("Are you sure you want to delete this room?")) return;
+    
+    // Delete dependencies first
     await supabase.from("room_images").delete().eq("room_id", id);
     await supabase.from("rooms_tags").delete().eq("room_id", id);
     await supabase.from("bookings").delete().eq("room_id", id);
     await supabase.from("rooms").delete().eq("id", id);
+    
     await fetchRooms();
+    toast.success("Room deleted");
   }
 
   function resetForm() {
@@ -184,24 +289,32 @@ export default function RoomsDashboardPage() {
     setSelectedRoom(null);
   }
 
-  // ---------- TAGS ----------
-  async function fetchTags() {
-    const { data, error } = await supabase
-      .from("tags")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) console.error("fetchTags:", error);
-    setTags(data || []);
-  }
-
-  async function createTag(name: string) {
-    if (!name) return;
-    const { error } = await supabase.from("tags").insert([{ name }]);
-    if (error) return alert("Tạo tag lỗi: " + error.message);
+  // ---------- TAGS LOGIC ----------
+  
+  async function createTag() {
+    if (!newTagName) return;
+    const { error } = await supabase.from("tags").insert([{ 
+      name: newTagName,
+      value_type: newTagCategory,
+      value: newTagName
+    }]);
+    
+    if (error) return toast.error("Create tag error: " + error.message);
+    
+    setNewTagName("");
     await fetchTags();
+    toast.success("Tag created");
   }
 
-  // ---------- IMAGES ----------
+  function toggleTagSelection(tag_id: string) {
+    setSelectedTagIds((prev) =>
+      prev.includes(tag_id)
+        ? prev.filter((t) => t !== tag_id)
+        : [...prev, tag_id]
+    );
+  }
+
+  // ---------- IMAGES LOGIC ----------
   async function openImages(room: Room) {
     setSelectedRoom(room);
     const { data } = await supabase
@@ -214,25 +327,27 @@ export default function RoomsDashboardPage() {
   }
 
   async function uploadImage(file?: File) {
-    if (!selectedRoom) return;
-    if (!file) {
-      return;
-    }
+    if (!selectedRoom || !file) return;
+    
     const formData = new FormData();
     formData.append("file", file);
     formData.append("idRoom", selectedRoom.id);
 
-    const res = await fetch("/api/room_img", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-    await supabase
-      .from("room_images")
-      .insert([{ room_id: selectedRoom.id, img_url: data.url }]);
-    setRoomImages(await fetchRoomImages(selectedRoom.id));
-    await fetchRooms();
+    try {
+      const res = await fetch("/api/room_img", { method: "POST", body: formData });
+      const data = await res.json();
+      
+      await supabase
+        .from("room_images")
+        .insert([{ room_id: selectedRoom.id, img_url: data.url }]);
+      
+      setRoomImages(await fetchRoomImages(selectedRoom.id));
+      await fetchRooms(); 
+      toast.success("Image uploaded");
+    } catch (e) {
+      console.error(e);
+      toast.error("Upload failed");
+    }
   }
 
   async function fetchRoomImages(room_id: string) {
@@ -245,483 +360,560 @@ export default function RoomsDashboardPage() {
   }
 
   async function deleteImage(imgId: string) {
-    if (!confirm("Xóa ảnh này?")) return;
+    if (!confirm("Delete this image?")) return;
+    if (!selectedRoom) return;
+
     const formData = new FormData();
     formData.append("action", "delete-one");
     formData.append("idRoom", selectedRoom.id);
     formData.append("img_id", imgId);
 
-    const res = await fetch("/api/room_img", {
-      method: "DELETE",
-      body: formData,
-    });
-
+    const res = await fetch("/api/room_img", { method: "DELETE", body: formData });
     const data = await res.json();
-    if (data.error) return data.error;
+    if (data.error) return toast.error(data.error);
 
-    if (selectedRoom) setRoomImages(await fetchRoomImages(selectedRoom.id));
+    setRoomImages(await fetchRoomImages(selectedRoom.id));
     await fetchRooms();
+    toast.success("Image deleted");
   }
 
-  // ---------- BOOKINGS ----------
+  // ---------- BOOKINGS LOGIC ----------
   async function openBookings(room: Room) {
     setSelectedRoom(room);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("bookings")
-      .select(
-        "id, start_time, end_time, status, tenant_id, created_at, total_price, users(name, email)"
-      )
+      .select(`
+        id, start_time, end_time, status, tenant_id, created_at, total_price,
+        users(name, email)
+      `)
       .eq("room_id", room.id)
       .order("created_at", { ascending: false });
-    setBookings(data || []);
+
+    if(error) console.error("fetchBookings error", error);
+    setBookings(data as unknown as Booking[] || []);
     setShowBookingsModal(true);
   }
 
   async function updateBookingStatus(bookingId: string, status: string) {
-    await supabase
-      .from("bookings")
-      .update({ status: status })
-      .eq("id", bookingId);
+    await supabase.from("bookings").update({ status }).eq("id", bookingId);
     if (selectedRoom) {
-      const { data } = await supabase
-        .from("bookings")
-        .select(
-          "id, start_time, end_time, status, tenant_id, created_at, total_price, users(name, email)"
-        )
-        .eq("room_id", selectedRoom.id)
-        .order("created_at", { ascending: false });
-      setBookings(data || []);
-
-      toast.success(`${status} booking`);
+      openBookings(selectedRoom);
+      toast.success(`Booking ${status}`);
     }
   }
 
-  // ---------- UI helpers ----------
-  function toggleTagSelection(tag_id: string) {
-    setSelectedTagIds((prev) =>
-      prev.includes(tag_id)
-        ? prev.filter((t) => t !== tag_id)
-        : [...prev, tag_id]
-    );
-  }
+  // ---------- COMPONENTS ----------
 
-  // Reusable small components:
+  // TagSelector using tag_id
+  const TagSelector = ({ 
+    readonly = false 
+  }: { 
+    readonly?: boolean 
+  }) => (
+    <div className="space-y-4 max-h-[300px] overflow-y-auto border p-2 rounded bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+      {Object.keys(groupedTags).map((category) => (
+        <div key={category}>
+          <h4 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-2 mt-1 border-b dark:border-gray-700 pb-1">
+            {category}
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {groupedTags[category].map((t) => (
+              <button
+                key={t.tag_id}
+                type="button"
+                disabled={readonly}
+                onClick={() => !readonly && toggleTagSelection(t.tag_id)}
+                className={`px-2 py-1 rounded text-xs border transition-all duration-200 ${
+                  readonly 
+                    ? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 cursor-default"
+                    : selectedTagIds.includes(t.tag_id)
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400"
+                }`}
+              >
+                {t.name}
+                {!readonly && selectedTagIds.includes(t.tag_id) && <span className="ml-1 opacity-70">✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const Sheet = ({ open, onClose, title, children }: any) => (
+    <>
+      <div
+        className={`fixed inset-0 z-40 transition-opacity bg-black/40 backdrop-blur-sm ${
+          open ? "opacity-100 visible" : "opacity-0 invisible"
+        }`}
+        onClick={onClose}
+      />
+      <aside
+        className={`fixed top-0 right-0 z-50 h-full w-full max-w-[720px] bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto transform transition-transform duration-300 ease-in-out ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6 border-b pb-4 dark:border-gray-700">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+            <button 
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400" 
+              onClick={onClose}
+            >
+              ✕
+            </button>
+          </div>
+          <div>{children}</div>
+        </div>
+      </aside>
+    </>
+  );
+
   const Btn = ({ children, onClick, className }: any) => (
     <button
       onClick={onClick}
-      className={
-        "px-3 py-1 rounded-md border hover:opacity-90 text-sm " +
-        (className || " bg-white border-gray-300")
-      }
+      className={`px-4 py-2 rounded-md font-medium text-sm transition-all shadow-sm active:scale-95 ${className}`}
     >
       {children}
     </button>
   );
-  const titleInputRef = useRef<HTMLInputElement>(null);
-const [hasFocused, setHasFocused] = useState(false);
 
-useEffect(() => {
-  if (showNewModal && !hasFocused) {
-    titleInputRef.current?.focus();
-    setHasFocused(true);
-  }
-  if (!showNewModal) setHasFocused(false);
-}, [showNewModal, hasFocused]);
-  if (loading) return <div>Loading...</div>; // hoặc skeleton UI
-  // ---------- Sheet component (slide-in from right) ----------
-  const Sheet = ({ open, onClose, title, children }: any) => {
-    return (
-      <>
-        {/* overlay */}
-        <div
-          className={`fixed inset-0 z-40 transition-opacity ${
-            open ? "opacity-100 visible" : "opacity-0 invisible"
-          }`}
-          aria-hidden
-          onClick={onClose}
-          style={{
-            transitionDuration: "200ms",
-            backgroundColor: "rgba(0,0,0,0.35)",
-          }}
-        />
-        {/* panel */}
-        <aside
-          className={`fixed top-0 right-0 z-50 h-full w-full max-w-[720px] transform bg-white shadow-2xl overflow-auto ${
-            open ? "translate-x-0" : "translate-x-full"
-          } transition-transform`}
-          style={{ transitionDuration: "220ms" }}
-          onClick={(e) => e.stopPropagation()} // ← thêm dòng này
+  if (loading) return <div className="p-6 pt-32 animate-pulse text-gray-500">Loading Dashboard...</div>;
 
-        >
-          <div className="p-6">
-            <div className="flex items-start justify-between">
-              <h3 className="text-lg font-semibold">{title}</h3>
-              <button className="text-gray-500" onClick={onClose}>
-                ✕
-              </button>
-            </div>
-            <div className="mt-4">{children}</div>
-          </div>
-        </aside>
-      </>
-    );
-  };
-
-  // ---------- RENDER: main list + sheets ----------
   return (
-    <div className="p-6 pt-32">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold">Rooms Management</h1>
-        <div className="flex gap-2">
+    <div className="p-6 pt-32 bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Rooms Management</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage your listings, bookings, and content.</p>
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
           <Btn
-            onClick={() => {
-              resetForm();
-              setShowNewModal(true);
-            }}
+            onClick={() => { resetForm(); setShowNewModal(true); }}
+            className="bg-blue-600 hover:bg-blue-700 text-white border-transparent"
           >
             + New Room
           </Btn>
-          <Btn onClick={() => setShowTagsModal(true)}>Manage Tags</Btn>
-          <Btn onClick={() => fetchRooms()}>Refresh</Btn>
+          <Btn
+            onClick={() => setShowTagsModal(true)}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            Manage Tags
+          </Btn>
+          <Btn
+            onClick={() => fetchRooms()}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            ↻ Refresh
+          </Btn>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {rooms.map((r: Room) => (
-          <div key={r.id} className="border rounded-lg p-3 shadow-sm">
-            <div className="h-40 w-full bg-gray-100 rounded-md mb-2 relative">
+      {/* Room Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {rooms.map((r) => (
+          <div key={r.id} className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+            {/* Image */}
+            <div className="h-48 w-full bg-gray-200 dark:bg-gray-700 relative overflow-hidden">
               {r.room_images?.[0]?.img_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={r.room_images[0].img_url}
                   alt={r.title}
-                  className="object-cover w-full h-40 rounded-md"
+                  className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
-                  No image
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <span className="text-4xl mb-2">📷</span>
+                  <span className="text-sm">No cover image</span>
                 </div>
               )}
+              <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-md">
+                {r.price?.toLocaleString()} vnđ
+              </div>
             </div>
 
-            <h2 className="text-lg font-medium">{r.title}</h2>
-            <p className="text-sm text-muted-foreground">
-              {r.city} · {r.price} vnđ
-            </p>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {(r.rooms_tags || []).map((rt: any) => (
-                <span
-                  key={rt.tag_id}
-                  className="text-xs px-2 py-1 bg-gray-200 rounded"
-                >
-                  {rt.tags?.name}
-                </span>
-              ))}
-            </div>
+            {/* Content */}
+            <div className="p-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-1">{r.title}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1">
+                📍 {r.city}
+              </p>
 
-            <div className="flex gap-2 mt-3">
-              <Btn onClick={() => startEdit(r)}>Edit</Btn>
-              <Btn onClick={() => openImages(r)}>Images</Btn>
-              <Btn onClick={() => openBookings(r)}>Show Bookings</Btn>
-              <Btn
-                className="bg-red-100 border-red-300"
-                onClick={() => deleteRoom(r.id)}
-              >
-                Delete
-              </Btn>
+              {/* Mini Tags Display */}
+              <div className="flex flex-wrap gap-1 mb-4 h-6 overflow-hidden">
+                {(r.rooms_tags || []).slice(0, 4).map((rt) => (
+                  <span
+                    key={rt.tag_id}
+                    className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded border dark:border-gray-600"
+                  >
+                    {rt.tags?.name}
+                  </span>
+                ))}
+                {(r.rooms_tags?.length || 0) > 4 && (
+                  <span className="text-[10px] px-1.5 py-0.5 text-gray-400">+{(r.rooms_tags?.length || 0) - 4} more</span>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="grid grid-cols-2 gap-2 mt-auto">
+                <Btn onClick={() => startEdit(r)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40">
+                  Edit Details
+                </Btn>
+                <Btn onClick={() => openImages(r)} className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                  Photos
+                </Btn>
+                <Btn onClick={() => openBookings(r)} className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40">
+                  Bookings
+                </Btn>
+                <Btn onClick={() => deleteRoom(r.id)} className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40">
+                  Delete
+                </Btn>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ---------- New Room Sheet ---------- */}
+      {/* 1. Create Room Sheet */}
       <Sheet
         open={showNewModal}
-        onClose={() => {
-          resetForm();
-          setShowNewModal(false);
-        }}
+        onClose={() => { resetForm(); setShowNewModal(false); }}
         title="Create New Room"
       >
-        <div className="space-y-2">
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="Title"
-            value={form.title}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, title: e.target.value }))
-            }
-          />
-          <textarea
-            className="w-full p-2 border rounded"
-            placeholder="Description"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="City"
-            value={form.city}
-            onChange={(e) => setForm({ ...form, city: e.target.value })}
-          />
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="Address"
-            value={form.address}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
-          />
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="Area"
-            value={form.area}
-            onChange={(e) => setForm({ ...form, area: e.target.value })}
-          />
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="Price"
-            value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-          />
-          <div>
-            <div className="mb-1 text-sm">Tags (click to toggle)</div>
-            <div className="flex flex-wrap gap-2">
-              {tags.map((t: Tag) => (
-                <button
-                  key={t.tag_id}
-                  onClick={() => toggleTagSelection(t.tag_id)}
-                  className={`px-2 py-1 rounded text-sm border ${
-                    selectedTagIds.includes(t.tag_id)
-                      ? "bg-blue-100"
-                      : "bg-white"
-                  }`}
-                >
-                  {t.name}
-                </button>
-              ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
+               <input
+                 ref={titleInputRef}
+                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                 placeholder="e.g. Sunny Apartment in D1"
+                 value={form.title}
+                 onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">City</label>
+              <input
+                className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                placeholder="e.g. Ho Chi Minh City"
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+              />
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Btn onClick={createRoom} className="bg-green-100">
-              Create
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+            <textarea
+              rows={4}
+              className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              placeholder="Describe the room..."
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div className="space-y-2">
+               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Price (VND)</label>
+               <input
+                 type="number"
+                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                 value={form.price}
+                 onChange={(e) => setForm({ ...form, price: e.target.value })}
+               />
+             </div>
+             <div className="space-y-2">
+               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Area (Text)</label>
+               <input
+                 type="text" 
+                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                 value={form.area}
+                 onChange={(e) => setForm({ ...form, area: e.target.value })}
+                 placeholder="e.g. 45m2"
+               />
+             </div>
+             <div className="space-y-2">
+               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</label>
+               <input
+                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                 value={form.address}
+                 onChange={(e) => setForm({ ...form, address: e.target.value })}
+               />
+             </div>
+          </div>
+
+          {/* Categorized Tag Selector */}
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Features & Tags</label>
+            <TagSelector />
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
+            <Btn onClick={createRoom} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+              Create Room
             </Btn>
-            <Btn
-              onClick={() => {
-                resetForm();
-                setShowNewModal(false);
-              }}
-              className="bg-red-100"
-            >
+            <Btn onClick={() => { resetForm(); setShowNewModal(false); }} className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white">
               Cancel
             </Btn>
           </div>
         </div>
       </Sheet>
 
-      {/* ---------- Edit Room Sheet ---------- */}
+      {/* 2. Edit Room Sheet */}
       <Sheet
         open={showEditModal}
-        onClose={() => {
-          resetForm();
-          setShowEditModal(false);
-        }}
+        onClose={() => { resetForm(); setShowEditModal(false); }}
         title="Edit Room"
       >
-        <div className="space-y-2">
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="Title"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-          <textarea
-            className="w-full p-2 border rounded"
-            placeholder="Description"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="City"
-            value={form.city}
-            onChange={(e) => setForm({ ...form, city: e.target.value })}
-          />
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="Price"
-            value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-          />
-
-          <div>
-            <div className="mb-1 text-sm">Tags (click to toggle)</div>
-            <div className="flex flex-wrap gap-2">
-              {tags.map((t: Tag) => (
-                <button
-                  key={t.tag_id}
-                  onClick={() => toggleTagSelection(t.tag_id)}
-                  className={`px-2 py-1 rounded text-sm border ${
-                    selectedTagIds.includes(t.tag_id)
-                      ? "bg-blue-100"
-                      : "bg-white"
-                  }`}
-                >
-                  {t.name}
-                </button>
-              ))}
-            </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="space-y-2">
+               <label className="text-sm font-medium">Title</label>
+               <input
+                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                 value={form.title}
+                 onChange={(e) => setForm({ ...form, title: e.target.value })}
+               />
+             </div>
+             <div className="space-y-2">
+               <label className="text-sm font-medium">City</label>
+               <input
+                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                 value={form.city}
+                 onChange={(e) => setForm({ ...form, city: e.target.value })}
+               />
+             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Btn onClick={updateRoom}>Save</Btn>
-            <Btn
-              onClick={() => {
-                resetForm();
-                setShowEditModal(false);
-              }}
-            >
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Description</label>
+            <textarea
+              rows={4}
+              className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div className="space-y-2">
+               <label className="text-sm font-medium">Price</label>
+               <input
+                 type="number"
+                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                 value={form.price}
+                 onChange={(e) => setForm({ ...form, price: e.target.value })}
+               />
+             </div>
+             <div className="space-y-2">
+               <label className="text-sm font-medium">Area</label>
+               <input
+                 type="text"
+                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                 value={form.area}
+                 onChange={(e) => setForm({ ...form, area: e.target.value })}
+               />
+             </div>
+             <div className="space-y-2">
+                <label className="text-sm font-medium">Address</label>
+                <input
+                  className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                />
+             </div>
+          </div>
+
+          {/* Categorized Tag Selector */}
+          <div>
+            <label className="block mb-2 text-sm font-medium">Features & Tags</label>
+            <TagSelector />
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
+            <Btn onClick={updateRoom} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+              Save Changes
+            </Btn>
+            <Btn onClick={() => { resetForm(); setShowEditModal(false); }} className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white">
               Cancel
             </Btn>
           </div>
         </div>
       </Sheet>
 
-      {/* ---------- Images Sheet ---------- */}
+      {/* 3. Manage Tags Sheet */}
       <Sheet
-        open={showImagesModal}
-        onClose={() => {
-          setSelectedRoom(null);
-          setShowImagesModal(false);
-        }}
-        title={selectedRoom ? `Images for: ${selectedRoom.title}` : "Images"}
+        open={showTagsModal}
+        onClose={() => setShowTagsModal(false)}
+        title="Manage Tags"
       >
-        <div className="flex justify-end mb-4">
-          <Btn onClick={() => fileInputRef.current?.click()}>Upload Image</Btn>
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+           <h4 className="text-sm font-semibold mb-3">Add New Tag</h4>
+           <div className="flex flex-col gap-3">
+             <div className="flex gap-2">
+                <input 
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  placeholder="Tag Name (e.g. WiFi, Pool)"
+                  className="flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+                <select
+                  value={newTagCategory}
+                  onChange={(e) => setNewTagCategory(e.target.value)}
+                  className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                  {availableCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                  {!availableCategories.includes("Amenities") && <option value="Amenities">Amenities</option>}
+                  {!availableCategories.includes("Rules") && <option value="Rules">Rules</option>}
+                </select>
+             </div>
+             <Btn onClick={createTag} className="bg-blue-600 text-white w-full">
+               Add Tag
+             </Btn>
+           </div>
         </div>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: "none" }}
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            if (f) await uploadImage(f);
-            if (fileInputRef.current) fileInputRef.current.value = "";
-          }}
-        />
+        <div>
+          <h4 className="text-sm font-semibold mb-3">Existing Tags</h4>
+          <div className="space-y-6">
+            {Object.keys(groupedTags).map((category) => (
+              <div key={category}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-bold uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">
+                    {category}
+                  </span>
+                  <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {groupedTags[category].map((t) => (
+                    <div
+                      key={t.tag_id}
+                      className="flex justify-between items-center px-3 py-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded text-sm"
+                    >
+                      <span className="dark:text-gray-300">{t.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Sheet>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {roomImages.map((img: RoomImage) => (
-            <div key={img.id} className="border rounded p-2">
+      {/* 4. Images Sheet */}
+      <Sheet
+        open={showImagesModal}
+        onClose={() => { setSelectedRoom(null); setShowImagesModal(false); }}
+        title={selectedRoom ? `Gallery: ${selectedRoom.title}` : "Images"}
+      >
+        <div className="mb-6">
+          <Btn onClick={() => fileInputRef.current?.click()} className="w-full bg-blue-600 text-white flex justify-center items-center gap-2 py-3">
+            <span>☁️</span> Upload New Image
+          </Btn>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (f) await uploadImage(f);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {roomImages.map((img) => (
+            <div key={img.id} className="relative group border rounded-lg overflow-hidden dark:border-gray-700">
               <img
                 src={img.img_url}
                 alt="room"
-                className="w-full h-32 object-cover rounded"
+                className="w-full h-40 object-cover"
               />
-              <div className="flex justify-between mt-2">
-                <span className="text-xs text-gray-600">
-                  #{String(img.id).slice(0, 6)}
-                </span>
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <button
                   onClick={() => deleteImage(img.id)}
-                  className="text-xs px-2 py-1 rounded bg-red-100"
+                  className="bg-red-600 text-white px-3 py-1 rounded text-sm shadow-lg hover:bg-red-700"
                 >
                   Delete
                 </button>
               </div>
             </div>
           ))}
-        </div>
-      </Sheet>
-
-      {/* ---------- Tags Sheet ---------- */}
-      <Sheet
-        open={showTagsModal}
-        onClose={() => setShowTagsModal(false)}
-        title="Tags"
-      >
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            placeholder="New tag name"
-            id="new-tag"
-            className="p-2 border rounded mr-2 flex-1"
-          />
-          <button
-            className="px-3 py-1 bg-blue-100 rounded"
-            onClick={() => {
-              const val = (
-                document.getElementById("new-tag") as HTMLInputElement
-              )?.value;
-              if (val) {
-                createTag(val);
-                (document.getElementById("new-tag") as HTMLInputElement).value =
-                  "";
-              }
-            }}
-          >
-            Add
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {tags.map((tag, index) => (
-            <div
-              key={`${tag.id}-${index}`}
-              className="px-3 py-1 rounded-md border text-sm max-w-[120px] truncate cursor-default bg-muted hover:bg-muted/80"
-              title={tag.name}
-            >
-              {tag.name}
+          {roomImages.length === 0 && (
+            <div className="col-span-2 text-center py-10 text-gray-500 border-2 border-dashed rounded-lg dark:border-gray-700">
+              No images uploaded yet.
             </div>
-          ))}
+          )}
         </div>
       </Sheet>
-      {/* ---------- Bookings Sheet ---------- */}
+
+      {/* 5. Bookings Sheet */}
       <Sheet
         open={showBookingsModal}
-        onClose={() => {
-          setShowBookingsModal(false);
-          setSelectedRoom(null);
-        }}
-        title={selectedRoom ? `Bookings for ${selectedRoom.title}` : "Bookings"}
+        onClose={() => { setShowBookingsModal(false); setSelectedRoom(null); }}
+        title="Bookings History"
       >
-        <div className="space-y-3">
-          {bookings.length === 0 && <div>No bookings</div>}
-          {bookings.map((b: Booking) => (
-            <div key={b.id} className="border rounded p-3">
-              <div className="flex justify-between">
+        <div className="space-y-4">
+          {bookings.length === 0 && (
+             <div className="text-center py-10 text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-lg">
+               No bookings found for this room.
+             </div>
+          )}
+          {bookings.map((b) => (
+            <div key={b.id} className="border rounded-lg p-4 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+              <div className="flex justify-between items-start mb-2">
                 <div>
-                  <div>
-                    <strong>User:</strong> {b.users?.name || b.tenant_id}
-                  </div>
-                  <div>
-                    <strong>From:</strong>{" "}
-                    {new Date(b.start_time).toLocaleString()}
-                  </div>
-                  <div>
-                    <strong>To:</strong> {new Date(b.end_time).toLocaleString()}
-                  </div>
-                  <div>
-                    <strong>Price:</strong> {b.total_price ?? "-"}
-                  </div>
-                  <div>
-                    <strong>Status:</strong> {b.status}
-                  </div>
+                   <h5 className="font-bold text-gray-900 dark:text-white">{b.users?.name || "Unknown User"}</h5>
+                   <p className="text-xs text-gray-500">{b.users?.email}</p>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <button
-                    className="px-3 py-4 bg-green-100 rounded"
-                    onClick={() => updateBookingStatus(b.id, "confirmed")}
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    className="px-3 py-4 bg-red-100 rounded"
-                    onClick={() => updateBookingStatus(b.id, "cancelled")}
-                  >
-                    Cancel
-                  </button>
+                <span className={`px-2 py-1 rounded-full text-xs font-bold capitalize ${
+                  b.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                  b.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                  'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {b.status}
+                </span>
+              </div>
+              
+              <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1 my-3">
+                <div className="flex justify-between">
+                  <span>Check-in:</span>
+                  <span className="font-medium">{new Date(b.start_time).toLocaleDateString()}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Check-out:</span>
+                  <span className="font-medium">{new Date(b.end_time).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between border-t pt-1 mt-1 dark:border-gray-700">
+                  <span>Total Price:</span>
+                  <span className="font-bold text-blue-600">{b.total_price?.toLocaleString()} VND</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-3 pt-3 border-t dark:border-gray-700">
+                <button
+                  className="flex-1 py-1.5 text-xs font-medium bg-green-50 hover:bg-green-100 text-green-700 rounded dark:bg-green-900/20 dark:text-green-400"
+                  onClick={() => updateBookingStatus(b.id, "confirmed")}
+                >
+                  Confirm
+                </button>
+                <button
+                  className="flex-1 py-1.5 text-xs font-medium bg-red-50 hover:bg-red-100 text-red-700 rounded dark:bg-red-900/20 dark:text-red-400"
+                  onClick={() => updateBookingStatus(b.id, "cancelled")}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           ))}

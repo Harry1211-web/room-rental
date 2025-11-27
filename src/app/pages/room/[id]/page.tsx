@@ -138,7 +138,7 @@ export default function RoomDetailPage() {
         setRoom(roomData as Room);
         setImages((imgData ?? []).map((i: RoomImage) => i.img_url));
         setTags(
-          ((tagData as { tags: { name: string } }[] | null) ?? []).map((t) => t.tags?.name ?? "")
+          ((tagData as unknown as { tags: { name: string } }[] | null) ?? []).map((t) => t.tags?.name ?? "").filter(Boolean)
         );
         setReviews(reviewsData as ReviewWithUser[] ?? []);
         setAvgRating(average);
