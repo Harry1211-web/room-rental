@@ -173,7 +173,7 @@ export default function BookingHistory() {
                 </span>
               </p>
 
-              {b.status === "approved" && (
+              {b.status === "confirmed" && (
                 <Button
                   onClick={(e) => {
                     e.stopPropagation(); // prevent card click when clicking the button
