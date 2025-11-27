@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 // 1. Updated Interfaces to match DB Schema
 interface Tag {
-  tag_id: string; // Changed from 'id' to 'tag_id'
+  tag_id: string;
   name: string;
   value_type: string; 
   value?: string;
@@ -26,19 +26,19 @@ interface Room {
   title: string;
   description: string;
   city: string;
-  price: number; // Schema says integer
-  area: string;  // Schema says text
+  price: number;
+  area: string;
   address: string;
   average_rating: number;
   room_images: { id: string; img_url: string; order_index: number }[];
-  rooms_tags: { tag_id: string; tags: Tag }[]; // Join table structure
+  rooms_tags: { tag_id: string; tags: Tag }[];
 }
 
 interface Booking {
   id: string;
   start_time: string;
   end_time: string;
-  status: string; // bookings_status_enum
+  status: string;
   total_price: number;
   tenant_id: string;
   users: { name: string; email: string };
@@ -76,8 +76,7 @@ export default function RoomsDashboardPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const [hasFocused, setHasFocused] = useState(false);
-
+  
   // Form State
   const [form, setForm] = useState({
     id: "",
@@ -90,6 +89,7 @@ export default function RoomsDashboardPage() {
     address: "",
   });
 
+  // --- Initial Load & User ID Setup ---
   useEffect(() => {
     if (!loading && idUser) {
       setForm((prev) => ({ ...prev, landlord_id: idUser }));
@@ -102,13 +102,18 @@ export default function RoomsDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
+  // --- FOCUS BUG FIX ---
+  // Only focus the input when the modal opens
   useEffect(() => {
-    if (showNewModal && !hasFocused) {
-      titleInputRef.current?.focus();
-      setHasFocused(true);
+    if (showNewModal) {
+      // Use setTimeout to ensure the input is rendered and focusable
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+      }, 0);
     }
-    if (!showNewModal) setHasFocused(false);
-  }, [showNewModal, hasFocused]);
+  }, [showNewModal]);
+  // --- END FOCUS BUG FIX ---
+
 
   // -------------------------------------------
   // Tag Grouping Logic
@@ -131,10 +136,9 @@ export default function RoomsDashboardPage() {
     await Promise.all([fetchRooms(), fetchTags()]);
   }
 
-  // ---------- DATA FETCHING (Corrected) ----------
+  // ---------- DATA FETCHING ----------
 
   async function fetchRooms() {
-    // Note: nested select for tags needs to call 'tag_id' inside 'tags()'
     const { data, error } = await supabase
       .from("rooms")
       .select(`
@@ -156,7 +160,6 @@ export default function RoomsDashboardPage() {
   }
 
   async function fetchTags() {
-    // Corrected: Select 'tag_id' instead of 'id'
     const { data, error } = await supabase
       .from("tags")
       .select("tag_id, name, value_type, value, amount") 
@@ -176,7 +179,7 @@ export default function RoomsDashboardPage() {
       description: form.description,
       city: form.city,
       price: Number(form.price) || 0,
-      area: form.area, // DB is text, passing string is correct
+      area: form.area,
       address: form.address,
     };
 
@@ -194,7 +197,7 @@ export default function RoomsDashboardPage() {
     if (selectedTagIds.length) {
       const rows = selectedTagIds.map((tag_id) => ({
         room_id: roomId,
-        tag_id: tag_id, // Explicit mapping
+        tag_id: tag_id,
       }));
       await supabase.from("rooms_tags").insert(rows);
     }
@@ -215,7 +218,7 @@ export default function RoomsDashboardPage() {
       price: room.price?.toString() || "",
       landlord_id: idUser!,
       address: room.address || "",
-      area: room.area || "", // DB is text
+      area: room.area || "",
     });
     
     // Extract existing tag IDs from the join table
@@ -261,7 +264,7 @@ export default function RoomsDashboardPage() {
   async function deleteRoom(id: string) {
     if (!confirm("Are you sure you want to delete this room?")) return;
     
-    // Delete dependencies first (though cascade might handle it, better explicit)
+    // Delete dependencies first
     await supabase.from("room_images").delete().eq("room_id", id);
     await supabase.from("rooms_tags").delete().eq("room_id", id);
     await supabase.from("bookings").delete().eq("room_id", id);
@@ -293,7 +296,7 @@ export default function RoomsDashboardPage() {
     const { error } = await supabase.from("tags").insert([{ 
       name: newTagName,
       value_type: newTagCategory,
-      value: newTagName // Optional: filling value same as name for now
+      value: newTagName
     }]);
     
     if (error) return toast.error("Create tag error: " + error.message);
@@ -377,8 +380,6 @@ export default function RoomsDashboardPage() {
   // ---------- BOOKINGS LOGIC ----------
   async function openBookings(room: Room) {
     setSelectedRoom(room);
-    // Note: Schema 'bookings' has 'tenant_id'. 
-    // The relationship 'users' usually relies on FK 'bookings_tenant_id_fkey' being detected.
     const { data, error } = await supabase
       .from("bookings")
       .select(`
@@ -396,7 +397,7 @@ export default function RoomsDashboardPage() {
   async function updateBookingStatus(bookingId: string, status: string) {
     await supabase.from("bookings").update({ status }).eq("id", bookingId);
     if (selectedRoom) {
-      openBookings(selectedRoom); // Refresh list
+      openBookings(selectedRoom);
       toast.success(`Booking ${status}`);
     }
   }
@@ -418,14 +419,14 @@ export default function RoomsDashboardPage() {
           <div className="flex flex-wrap gap-2">
             {groupedTags[category].map((t) => (
               <button
-                key={t.tag_id} // Changed to tag_id
+                key={t.tag_id}
                 type="button"
                 disabled={readonly}
-                onClick={() => !readonly && toggleTagSelection(t.tag_id)} // Changed to tag_id
+                onClick={() => !readonly && toggleTagSelection(t.tag_id)}
                 className={`px-2 py-1 rounded text-xs border transition-all duration-200 ${
                   readonly 
                     ? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 cursor-default"
-                    : selectedTagIds.includes(t.tag_id) // Changed to tag_id
+                    : selectedTagIds.includes(t.tag_id)
                       ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                       : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400"
                 }`}
