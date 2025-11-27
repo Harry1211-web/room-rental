@@ -591,6 +591,7 @@ export default function RoomsDashboardPage() {
                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
                <input
                  ref={titleInputRef}
+                 autoFocus
                  className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                  placeholder="e.g. Sunny Apartment in D1"
                  value={form.title}
