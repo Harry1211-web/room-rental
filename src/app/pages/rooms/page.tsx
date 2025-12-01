@@ -347,8 +347,8 @@ export default function RoomsDashboardPage() {
     }
 
     toast.success("Room created successfully");
-    await fetchRooms();
-    toggleModal("new", false);
+    await Promise.all([fetchRooms(), fetchTags()]);
+    toggleModal('new', false);
   }
 
   async function startEdit(room: Room) {
@@ -396,8 +396,8 @@ export default function RoomsDashboardPage() {
     }
 
     toast.success("Room updated");
-    await fetchRooms();
-    toggleModal("edit", false);
+    Promise.all([fetchRooms(), fetchTags()]);
+    toggleModal('edit', false);
   }
 
   async function deleteRoom(id: string) {
@@ -411,7 +411,7 @@ export default function RoomsDashboardPage() {
     await supabase.from("rooms_tags").delete().eq("room_id", id);
     await supabase.from("bookings").delete().eq("room_id", id);
     await supabase.from("rooms").delete().eq("id", id);
-    await fetchRooms();
+    Promise.all([fetchRooms(), fetchTags()]);
     toast.success("Room deleted");
   }
 
