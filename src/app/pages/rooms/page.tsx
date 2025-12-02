@@ -663,7 +663,7 @@ export default function RoomsDashboardPage() {
                 </div>
               )}
               <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-md">
-                {r.price?.toLocaleString()} vnđ
+                {r.price?.toLocaleString()} $
               </div>
             </div>
 
@@ -1076,7 +1076,7 @@ export default function RoomsDashboardPage() {
                 <div className="flex justify-between border-t pt-1">
                   <span>Total:</span>
                   <span className="font-bold text-blue-600">
-                    {b.total_price?.toLocaleString()} VND
+                    {b.total_price?.toLocaleString()} $
                   </span>
                 </div>
               </div>
