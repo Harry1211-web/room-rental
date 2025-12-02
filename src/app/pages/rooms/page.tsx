@@ -263,7 +263,7 @@ export default function RoomsDashboardPage() {
       `
       )
       .eq("landlord_id", idUser)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: true });
 
     if (error) toast.error("Failed to load rooms");
     setRooms((data as unknown as Room[]) || []);
