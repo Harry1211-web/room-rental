@@ -264,7 +264,7 @@ export default function RoomsDashboardPage() {
       `
       )
       .eq("landlord_id", idUser)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false });
 
     if (error) toast.error("Failed to load rooms");
     setRooms((data as unknown as Room[]) || []);
@@ -807,6 +807,7 @@ export default function RoomsDashboardPage() {
               <input
                 name="price"
                 type="number"
+                step="any"
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                 value={form.price}
                 onChange={handleInputChange}
