@@ -35,6 +35,7 @@ interface Booking {
   status: string;
   total_price: number;
   tenant_id: string;
+  created_at: string,
   users: { name: string; email: string; phone_number: string };
 }
 
@@ -579,15 +580,45 @@ export default function RoomsDashboardPage() {
   }
 
   async function openBookings(room: Room) {
-    setSelectedRoom(room);
-    const { data } = await supabase
-      .from("bookings")
-      .select("*, users(name, email, phone_number)")
-      .eq("room_id", room.id)
-      .order("created_at", { ascending: false });
-    setBookings((data as unknown as Booking[]) || []);
-    toggleModal("bookings", true);
+  setSelectedRoom(room);
+  
+  // 1. Lấy dữ liệu như bình thường, vẫn giữ order theo created_at
+  const { data } = await supabase
+    .from("bookings")
+    .select("*, users(name, email, phone_number)")
+    .eq("room_id", room.id)
+    .order("created_at", { ascending: false });
+
+  // Định nghĩa thứ tự ưu tiên của status
+  const statusOrder = {
+    pending: 1,
+    approved: 2,
+    refused: 3,
+  };
+
+  if (data) {
+    // 2. Sắp xếp lại mảng dữ liệu bằng JavaScript (client-side)
+    const sortedBookings = (data as unknown as Booking[]).sort((a, b) => {
+      const orderA = statusOrder[a.status as keyof typeof statusOrder] || 99; // Gán 99 nếu status không xác định
+      const orderB = statusOrder[b.status as keyof typeof statusOrder] || 99;
+
+      // Sắp xếp chính: theo status (1, 2, 3...)
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      // Sắp xếp phụ (nếu status giống nhau): theo created_at
+      // Dữ liệu đã lấy order("created_at", { ascending: false }), nên nếu muốn giữ thứ tự mới nhất (DESC) thì đảo ngược:
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    setBookings(sortedBookings);
+  } else {
+    setBookings([]);
   }
+
+  toggleModal("bookings", true);
+}
 
   async function updateBookingStatus(bid: string, status: string) {
     await supabase.from("bookings").update({ status }).eq("id", bid);
