@@ -87,7 +87,7 @@ export function ConfirmDeleteModal({ open, onConfirm, onCancel }) {
 export default function UserPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { setLoading, logout } = useUser();
+  const { setLoading, logout, updateAvatar } = useUser();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   
   //Custom file input ref
@@ -275,6 +275,7 @@ export default function UserPage() {
         ...data,
         avatar_url: data.avatar_url ? data.avatar_url + `?t=${Date.now()}` : null
       });
+      updateAvatar(data.avatar_url ? data.avatar_url + `?t=${Date.now()}` : null); 
       setEditing(false);
       setNewAvatarFile(null);
       setPreviewAvatar(null); //Reset preview
@@ -462,7 +463,8 @@ export default function UserPage() {
                   type="button"
                   onClick={() => {
                     setNewAvatarFile(null); 
-                    setPreviewAvatar("/avatar_default.jpg"); 
+                    setPreviewAvatar(user.avatar_url || "/avatar_default.jpg"); 
+                    updateAvatar(null);
                     //Reset input file ref
                     if (fileInputRef.current) {
                         fileInputRef.current.value = "";

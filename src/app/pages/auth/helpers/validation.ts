@@ -16,6 +16,31 @@ export function handleStrongPassword(password: string) {
   return { valid: score === 100, errors, score };
 }
 
+export function validateName(name: string) {
+  if (!name.trim()) return "Full name is required.";
+  return "";
+}
+
+export function validateEmail(email: string) {
+  if (!email.trim()) return "Email is required.";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) return "Invalid email format.";
+  return "";
+}
+
+export function validatePhone(phone: string) {
+  if (!phone.trim()) return "Phone number is required.";
+  const phoneRegex = /^[0-9]{9,12}$/;
+  if (!phoneRegex.test(phone)) return "Invalid phone number.";
+  return "";
+}
+
+export function validateConfirmationPassword(password: string, confirmation: string) {
+  if (!confirmation.trim()) return "Confirm password is required.";
+  if (password !== confirmation) return "Passwords do not match.";
+  return "";
+}
+
 export function validateRegisterFields(
   name: string,
   email: string,
