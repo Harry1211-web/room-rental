@@ -1,5 +1,6 @@
 "use client";
 
+import imageCompression from "browser-image-compression";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -14,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// ==================== TYPES ====================
+//==================== TYPES ====================
 interface UserProfile {
   id: string;
   name: string;
@@ -46,7 +47,7 @@ interface Room {
   image_url?: string | null;
 }
 
-// ==================== MODAL COMPONENT ====================
+//==================== MODAL COMPONENT ====================
 
 export function ConfirmDeleteModal({ open, onConfirm, onCancel }) {
   return (
@@ -81,14 +82,14 @@ export function ConfirmDeleteModal({ open, onConfirm, onCancel }) {
   );
 }
 
-// ==================== MAIN COMPONENT ====================
+//==================== MAIN COMPONENT ====================
 export default function UserPage() {
   const { id } = useParams();
   const router = useRouter();
   const { setLoading, logout } = useUser();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   
-  // Custom file input ref
+  //Custom file input ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -113,7 +114,7 @@ export default function UserPage() {
     setLoading(false);
   }, [setLoading]);
 
-  // Fetch current logged-in user to check ownership
+  //Fetch current logged-in user to check ownership
   useEffect(() => {
     const fetchCurrentUser = async () => {
       const { data: sessionData } = await supabase.auth.getUser();
@@ -129,7 +130,7 @@ export default function UserPage() {
     fetchCurrentUser();
   }, []);
 
-  // Fetch target user data, reviews, and rooms
+  //Fetch target user data, reviews, and rooms
   useEffect(() => {
     if (!id) return;
 
@@ -166,7 +167,7 @@ export default function UserPage() {
           .order("created_at", { ascending: false });
         if (roomsError) throw roomsError;
 
-        // Extract the first image URL for room cover
+        //Extract the first image URL for room cover
         const roomsList: Room[] = roomsData?.map(r => ({
             ...r,
             image_url: r.room_images?.[0]?.img_url || null
@@ -189,7 +190,7 @@ export default function UserPage() {
     fetchUser();
   }, [id]);
 
-  // ==================== FILTER & SORT LOGIC ====================
+  //==================== FILTER & SORT LOGIC ====================
   const filteredReviews = reviews.filter((r) =>
     filterRating ? r.rating === filterRating : true
   );
@@ -218,20 +219,20 @@ export default function UserPage() {
 
   const isOwner = currentUser?.id === user.id;
 
-  // ==================== HANDLE PROFILE UPDATE ====================
+  //==================== HANDLE PROFILE UPDATE ====================
   const handleSaveProfile = async () => {
     setDisabledButton(true)
     try {
       let avatarUrl = user?.avatar_url || null;
       let shouldDeleteOldAvatar = false;
 
-      // 1. Check for Delete action: No new file, but user had an old avatar, AND preview is set to default image.
+      //1. Check for Delete action: No new file, but user had an old avatar, AND preview is set to default image.
       if (!newAvatarFile && user.avatar_url && previewAvatar === "/avatar_default.jpg") {
           shouldDeleteOldAvatar = true;
           avatarUrl = null; 
       }
 
-      // 2. Handle New File Upload
+      //2. Handle New File Upload
       if (newAvatarFile) {
         const formData = new FormData();
         formData.append("userId", user.id);
@@ -244,12 +245,12 @@ export default function UserPage() {
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         avatarUrl = data.avatarUrl;
-        shouldDeleteOldAvatar = false; // Uploading new file overrides delete command
+        shouldDeleteOldAvatar = false; //Uploading new file overrides delete command
       }
       
-      // 3. Execute Storage Deletion
+      //3. Execute Storage Deletion
       if (shouldDeleteOldAvatar) {
-          // Call API DELETE to remove the physical file from Supabase Storage
+          //Call API DELETE to remove the physical file from Supabase Storage
           await fetch("/api/avatar", {
               method: "DELETE",
               body: (() => {
@@ -260,7 +261,7 @@ export default function UserPage() {
           });
       }
 
-      // 4. Update Profile in Database
+      //4. Update Profile in Database
       const { data, error } = await supabase
         .from("users")
         .update({ name: editName, email: editEmail, phone_number: editPhone, avatar_url: avatarUrl })
@@ -269,12 +270,15 @@ export default function UserPage() {
         .single();
       if (error) throw error;
       
-      setUser(data);
+      setUser({
+        ...data,
+        avatar_url: data.avatar_url ? data.avatar_url + `?t=${Date.now()}` : null
+      });
       setEditing(false);
       setNewAvatarFile(null);
-      setPreviewAvatar(null); // Reset preview
+      setPreviewAvatar(null); //Reset preview
       
-      // Reset input file ref sau khi lưu
+      //Reset input file ref sau khi lưu
       if (fileInputRef.current) {
           fileInputRef.current.value = "";
       }
@@ -286,7 +290,7 @@ export default function UserPage() {
     setDisabledButton(false)
   };
 
-  // ==================== HANDLE PROFILE DELETION ====================
+  //==================== HANDLE PROFILE DELETION ====================
   const handleDeleteProfile = () => {
     if (!user) return;
     setOpenConfirmDelete(true);
@@ -299,17 +303,17 @@ export default function UserPage() {
     try {
       setLoading(true);
 
-      // 1. Get rooms listed by user
+      //1. Get rooms listed by user
       const { data: roomsData, error: roomsError } = await supabase
         .from("rooms")
         .select("id")
         .eq("landlord_id", user.id);
       if (roomsError) throw roomsError;
 
-      // 2. Delete related data if user is a landlord
+      //2. Delete related data if user is a landlord
       if (roomsData?.length) {
         for (const room of roomsData) {
-          // 2a. Delete room images (Storage & DB)
+          //2a. Delete room images (Storage & DB)
           await fetch("/api/storage/room_images", {
             method: "DELETE",
             body: (() => {
@@ -320,7 +324,7 @@ export default function UserPage() {
             })(),
           });
 
-          // 2b. Delete room verifications (Storage & DB)
+          //2b. Delete room verifications (Storage & DB)
           await fetch("/api/storage/verification", {
             method: "DELETE",
             body: (() => {
@@ -331,7 +335,7 @@ export default function UserPage() {
             })(),
           });
           
-          // Xóa records verifications trong DB
+          //Xóa records verifications trong DB
           await supabase
             .from("verifications")
             .delete()
@@ -339,7 +343,7 @@ export default function UserPage() {
         }
       }
       
-      // 3. Delete avatar (Storage)
+      //3. Delete avatar (Storage)
       if (user.avatar_url) {
         await fetch("/api/avatar", {
           method: "DELETE",
@@ -351,14 +355,14 @@ export default function UserPage() {
         });
       }
 
-      // 4. Delete user record
+      //4. Delete user record
       const { error: deleteUserError } = await supabase
         .from("users")
         .delete()
         .eq("id", user.id);
       if (deleteUserError) throw deleteUserError;
 
-      // 5. Sign out & redirect
+      //5. Sign out & redirect
       alert("User and all related data deleted.");
       logout();
       router.push("/");
@@ -376,6 +380,7 @@ export default function UserPage() {
       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-12">
         <Image
           src={previewAvatar || user.avatar_url || "/avatar_default.jpg"}
+          unoptimized
           width={140}
           height={140}
           alt={user.name}
@@ -419,11 +424,19 @@ export default function UserPage() {
                   accept="image/*"
                   ref={fileInputRef}
                   style={{ display: 'none' }}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      setNewAvatarFile(file);
-                      setPreviewAvatar(URL.createObjectURL(file));
+
+                      //Compress image before setting
+                      const compressed = await imageCompression(file, {
+                        maxSizeMB: 0.15,
+                        maxWidthOrHeight: 256,
+                        useWebWorker: true,
+                      });
+
+                      setNewAvatarFile(compressed);
+                      setPreviewAvatar(URL.createObjectURL(compressed));
                     } else {
                       setNewAvatarFile(null);
                       setPreviewAvatar(null);
@@ -449,7 +462,7 @@ export default function UserPage() {
                   onClick={() => {
                     setNewAvatarFile(null); 
                     setPreviewAvatar("/avatar_default.jpg"); 
-                    // Reset input file ref
+                    //Reset input file ref
                     if (fileInputRef.current) {
                         fileInputRef.current.value = "";
                     }
@@ -471,13 +484,13 @@ export default function UserPage() {
                 <button
                   onClick={() => {
                     setEditing(false);
-                    // Reset edit states to current user data
+                    //Reset edit states to current user data
                     setEditName(user.name);
                     setEditEmail(user.email);
                     setEditPhone(user.phone_number);
                     setNewAvatarFile(null);
                     setPreviewAvatar(null);
-                    // Reset input file ref
+                    //Reset input file ref
                     if (fileInputRef.current) {
                         fileInputRef.current.value = "";
                     }
