@@ -107,6 +107,8 @@ export default function UserPage() {
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
 
+  const [disabledButton, setDisabledButton] = useState<boolean>(false);
+
   useEffect(() => {
     setLoading(false);
   }, [setLoading]);
@@ -218,6 +220,7 @@ export default function UserPage() {
 
   // ==================== HANDLE PROFILE UPDATE ====================
   const handleSaveProfile = async () => {
+    setDisabledButton(true)
     try {
       let avatarUrl = user?.avatar_url || null;
       let shouldDeleteOldAvatar = false;
@@ -280,6 +283,7 @@ export default function UserPage() {
       console.error("Error updating profile:", err);
       alert("Failed to update profile.");
     }
+    setDisabledButton(false)
   };
 
   // ==================== HANDLE PROFILE DELETION ====================
@@ -460,6 +464,7 @@ export default function UserPage() {
                 <button
                   onClick={handleSaveProfile}
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
+                  disabled={disabledButton}
                 >
                   Save Changes
                 </button>
@@ -608,7 +613,7 @@ export default function UserPage() {
                 <h3
                   className="font-semibold text-lg text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                   onClick={() =>
-                    review.rooms && router.push(`/room/${review.rooms.id}`)
+                    review.rooms && router.push(`/pages/room/${review.rooms.id}`)
                   }
                 >
                   {review.rooms?.title || "Unknown room"}
