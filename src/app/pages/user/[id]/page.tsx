@@ -540,7 +540,7 @@ export default function UserPage() {
               <div
                 key={room.id}
                 className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow hover:shadow-lg cursor-pointer transition-all duration-300"
-                onClick={() => router.push(`/room/${room.id}`)}
+                onClick={() => router.push(`/pages/room/${room.id}`)}
               >
                 <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 relative">
                   <Image
