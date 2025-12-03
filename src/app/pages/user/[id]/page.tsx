@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { useUser } from "@/app/context/Usercontext";
 import {
@@ -282,10 +283,10 @@ export default function UserPage() {
       if (fileInputRef.current) {
           fileInputRef.current.value = "";
       }
-
+      toast.success("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
-      alert("Failed to update profile.");
+      toast.error("Failed to update profile.");
     }
     setDisabledButton(false)
   };
@@ -363,12 +364,12 @@ export default function UserPage() {
       if (deleteUserError) throw deleteUserError;
 
       //5. Sign out & redirect
-      alert("User and all related data deleted.");
+      toast.success("User and all related data deleted.");
       logout();
       router.push("/");
     } catch (err) {
       console.error("Delete user error:", err);
-      alert("Failed to delete user. Check console for details.");
+      toast.error("Failed to delete user. Check console for details.");
     } finally {
       setLoading(false);
     }
