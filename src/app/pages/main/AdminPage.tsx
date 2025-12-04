@@ -9,6 +9,7 @@ import VerificationsPage from "@/app/admin/VerificationsPage";
 import ReportsPage from "@/app/admin/ReportsPage";
 import ReviewsPage from "@/app/admin/ReviewsPage";
 import DashboardPage from "@/app/admin/DashboardPage";
+import Banana from "../test/page";
 
 export default function AdminPage() {
   const searchParams = useSearchParams();
@@ -31,6 +32,7 @@ export default function AdminPage() {
         {tab === "review" && <ReviewsPage />}
         {tab === "dash" && <DashboardPage />}
       </main>
+      <Banana />
     </div>
   );
 }

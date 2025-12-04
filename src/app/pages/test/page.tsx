@@ -1,144 +1,79 @@
 "use client";
-import React, { useState } from "react";
 
-export default function BangbooLoader() {
-  const [imageUrl, setImageUrl] = useState("");
-  const [frameHeight, setFrameHeight] = useState(125);
-  const [animationSpeed, setAnimationSpeed] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+import { useState, useEffect } from "react";
 
-  const startLoading = () => {
-    setIsLoading(true);
-    // Simulate loading
-    setTimeout(() => setIsLoading(false), 5000);
+const KONAMI_CODE = [
+  "ArrowUp",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowLeft",
+  "ArrowRight",
+  "b",
+  "a",
+];
+
+export default function Banana() {
+  const [keysPressed, setKeysPressed] = useState<string[]>([]);
+  const [showModal, setShowModal] = useState(false);
+
+  //Listen for key presses
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      setKeysPressed((prev) => {
+        const updated = [...prev, e.key].slice(-KONAMI_CODE.length); //keep last n keys
+        if (updated.join(",") === KONAMI_CODE.join(",")) {
+          setShowModal(true);
+        }
+        return updated;
+      });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const deleteLeftoverFolders = async () => {
+    if (!confirm("Are you sure you want to delete all leftover buckets?")) return;
+    try {
+      const res = await fetch("/api/admin/delete-leftovers", { method: "POST" });
+      const data = await res.json();
+      if (data.success) alert("Leftover buckets deleted!");
+      else alert("Error: " + data.error);
+    } catch (err) {
+      alert("Something went wrong: " + err);
+    }
   };
 
-  // Calculate number of frames (4500 / frameHeight)
-  const frameCount = Math.floor(4500 / frameHeight);
+  if (!showModal) {
+    return (
+      //Tiny debug overlay in bottom-right corner
+      <div className="fixed bottom-1 right-1 text-xs text-gray-500 opacity-30 pointer-events-none z-50">
+        {keysPressed.join(" → ")}
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center p-8">
-      <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full">
-        <h1 className="text-3xl font-bold text-center mb-6 text-slate-800">
-          Bangboo Walking Animation Tester
-        </h1>
-
-        {/* Settings Panel */}
-        <div className="space-y-4 mb-8 bg-slate-50 p-6 rounded-lg">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Image URL (your 123x4500 webp)
-            </label>
-            <input
-              type="text"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/bangboo-walk.webp"
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Frame Height: {frameHeight}px (Frames: {frameCount})
-            </label>
-            <input
-              type="range"
-              min="50"
-              max="300"
-              value={frameHeight}
-              onChange={(e) => setFrameHeight(Number(e.target.value))}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Animation Speed: {animationSpeed}s
-            </label>
-            <input
-              type="range"
-              min="0.3"
-              max="3"
-              step="0.1"
-              value={animationSpeed}
-              onChange={(e) => setAnimationSpeed(Number(e.target.value))}
-              className="w-full"
-            />
-          </div>
-
-          <button
-            onClick={startLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-          >
-            Test Loading Animation
-          </button>
-        </div>
-
-        {/* Animation Preview */}
-        <div className="bg-slate-100 rounded-lg p-8 flex flex-col items-center">
-          <h2 className="text-lg font-semibold text-slate-700 mb-4">Preview</h2>
-
-          {imageUrl ? (
-            <div
-              className="overflow-hidden bg-white rounded-lg shadow-lg"
-              style={{
-                width: "123px",
-                height: `${frameHeight}px`,
-              }}
-            >
-              <div
-                style={{
-                  width: "123px",
-                  height: "4500px",
-                  backgroundImage: `url(${imageUrl})`,
-                  backgroundRepeat: "no-repeat",
-                  backgroundSize: "123px 4500px",
-                  animation: isLoading
-                    ? `walk ${animationSpeed}s steps(${frameCount}) infinite`
-                    : "none",
-                }}
-              />
-            </div>
-          ) : (
-            <div className="text-slate-500 text-center py-12">
-              Enter an image URL above to preview
-            </div>
-          )}
-
-          {isLoading && (
-            <p className="mt-4 text-slate-600 font-medium">Loading...</p>
-          )}
-        </div>
-
-        {/* Code Example */}
-        <div className="mt-8 bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto">
-          <p className="text-xs text-slate-400 mb-2">
-            CSS for your Next.js project:
-          </p>
-          <pre className="text-sm">
-            {`.bangboo-loader {
-  width: 123px;
-  height: ${frameHeight}px;
-  background: url('/bangboo-walk.webp') no-repeat;
-  background-size: 123px 4500px;
-  animation: walk ${animationSpeed}s steps(${frameCount}) infinite;
-}
-
-@keyframes walk {
-  to { background-position: 0 -4500px; }
-}`}
-          </pre>
-        </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
+        <h2 className="text-xl font-bold mb-4">Admin Utilities</h2>
+        <p className="mb-4 text-sm text-gray-600">Hidden utilities for admins only.</p>
+        <button
+          className="w-full bg-red-500 text-white py-2 rounded mb-2 hover:bg-red-600"
+          onClick={deleteLeftoverFolders}
+        >
+          Delete Leftover Buckets
+        </button>
+        <button
+          className="w-full bg-gray-300 py-2 rounded hover:bg-gray-400"
+          onClick={() => setShowModal(false)}
+        >
+          Close
+        </button>
       </div>
-
-      <style jsx>{`
-        @keyframes walk {
-          to {
-            background-position: 0 -4500px;
-          }
-        }
-      `}</style>
     </div>
   );
 }
