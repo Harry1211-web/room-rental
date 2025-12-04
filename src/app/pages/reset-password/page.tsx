@@ -1,0 +1,140 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { Loader } from "@/components/Loader";
+import { toast } from "sonner";
+import { useSearchParams, useRouter } from "next/navigation";
+import { handleStrongPassword, validateConfirmationPassword } from "../auth/helpers/validation"; 
+
+
+export default function ResetPasswordPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [confirmError, setConfirmError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  const token = searchParams.get("access_token");
+
+  useEffect(() => {
+    const applyRecoverySession = async () => {
+      if (!token) {
+        toast.error("Invalid or missing reset token.");
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: token,
+      });
+
+      if (error) {
+        toast.error("Reset link expired or invalid.");
+      }
+
+      setLoading(false);
+    };
+
+    applyRecoverySession();
+  }, [token]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    //Strong password validation
+    const { valid, errors } = handleStrongPassword(newPassword);
+    setPasswordErrors(errors);
+
+    if (!valid) {
+      toast.error("Password is too weak.");
+      return;
+    }
+
+    //Confirmation validation
+    const confirmErr = validateConfirmationPassword(newPassword, confirmPassword);
+    setConfirmError(confirmErr);
+    if (confirmErr) return;
+
+    setSubmitting(true);
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      toast.error(error.message);
+      setSubmitting(false);
+      return;
+    }
+
+    toast.success("Password updated! Redirecting...");
+
+    setTimeout(() => router.push("/login"), 1500);
+  };
+
+  return (
+    <div className="p-6 space-y-6 max-w-md mx-auto">
+      {loading ? (
+        <Loader message="Validating reset link... 🔒" />
+      ) : (
+        <>
+          <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-gray-100">
+            Reset Your Password
+          </h1>
+
+          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+
+            <input
+              type="password"
+              placeholder="New password"
+              className="w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-yellow-500"
+              value={newPassword}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setPasswordErrors([]);
+              }}
+            />
+
+            {/* Password errors */}
+            {passwordErrors.length > 0 && (
+              <ul className="text-red-500 text-sm space-y-1">
+                {passwordErrors.map((err, i) => (
+                  <li key={i}>• {err}</li>
+                ))}
+              </ul>
+            )}
+
+            <input
+              type="password"
+              placeholder="Confirm new password"
+              className="w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-yellow-500"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setConfirmError("");
+              }}
+            />
+
+            {confirmError && (
+              <p className="text-red-500 text-sm">{confirmError}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 transition"
+            >
+              {submitting ? "Updating..." : "Update Password"}
+            </button>
+          </form>
+        </>
+      )}
+    </div>
+  );
+}

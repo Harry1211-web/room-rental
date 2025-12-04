@@ -26,7 +26,7 @@ export default function ForgotForm({ setMode }: ForgotFormProps) {
     try {
       //Fire and forget: don't wait for the email to actually arrive
       supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/pages/reset-password`,
       }).catch((err) => {
         console.error("Forgot password email error:", err);
       });
