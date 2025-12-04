@@ -62,7 +62,13 @@ export default function Banana() {
 
   if (!showModal) {
     return (
-      <div className="fixed bottom-2 right-2 text-xs text-green-400 font-mono dark:text-green-300 bg-black bg-opacity-70 dark:bg-gray-900 px-2 py-1 rounded pointer-events-none z-50">
+      <div
+        className="fixed bottom-2 right-2 text-[9px] font-mono text-green-400 dark:text-green-300 bg-black bg-opacity-20 dark:bg-gray-900/20 px-1 py-0.5 rounded pointer-events-none z-50 select-none"
+        style={{
+          opacity: 0.15,
+          mixBlendMode: "difference",
+        }}
+      >
         {keysPressed.join(" → ")}
       </div>
     );
