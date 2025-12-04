@@ -114,7 +114,10 @@ export default function Banana() {
 
   if (!showModal) {
     return (
-      <div className="fixed bottom-2 right-2 text-xs font-mono text-gray-400 bg-black bg-opacity-20 px-1 py-0.5 rounded pointer-events-none select-none z-50">
+      <div
+        className="fixed bottom-2 right-2 text-[8px] font-mono text-gray-700 bg-black bg-opacity-10 px-0.5 py-0.25 rounded pointer-events-none select-none z-50"
+        style={{ opacity: 0.15 }}
+      >
         {keysPressed.join(" → ")}
       </div>
     );

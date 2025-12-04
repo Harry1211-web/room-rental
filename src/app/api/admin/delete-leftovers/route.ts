@@ -1,13 +1,12 @@
-// app/api/admin/delete-leftovers/route.ts
+//app/api/admin/delete-leftovers/route.ts
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 
 const PAGE_SIZE = 100;
 const CHUNK_DELETE = 100;
 
-async function listAllFiles(bucket: string, prefix: string) {
+//Recursively list all files in a bucket under a prefix
+async function listAllFiles(bucket: string, prefix: string): Promise<string[]> {
   const results: string[] = [];
   let page = 0;
 
@@ -20,10 +19,10 @@ async function listAllFiles(bucket: string, prefix: string) {
     if (!data || data.length === 0) break;
 
     for (const item of data as any[]) {
-      if (item.type === "folder") {
+      if (item.type === "folder" && item.name) {
         const nested = await listAllFiles(bucket, `${prefix}/${item.name}`);
         results.push(...nested);
-      } else {
+      } else if (item.type === "file" && item.name) {
         results.push(`${prefix}/${item.name}`);
       }
     }
@@ -39,39 +38,32 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { userId } = body;
-    if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
-    // -----------------------------
-    // 🔐 Verify admin user via session cookie
-    // -----------------------------
-    const supabaseServer = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { cookie: cookies().toString() } } }
-    );
-
-    const {
-      data: { user },
-      error: userError
-    } = await supabaseServer.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    const { data: profile } = await supabaseServer
+    //-----------------------------
+    //🔐 Verify admin user via supabaseAdmin
+    //-----------------------------
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("users")
       .select("role")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
+
+    if (profileError) {
+      console.error("Profile fetch error:", profileError);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     if (!profile || profile.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // -----------------------------
-    // 🔥 Safe to delete files
-    // -----------------------------
+    //-----------------------------
+    //🔥 Safe to delete files
+    //-----------------------------
     const buckets = ["avatars", "room_images", "proof"];
     const results: Record<string, { deleted: number; error?: string }> = {};
 
@@ -80,6 +72,7 @@ export async function POST(req: Request) {
         const prefix = userId;
         const files = await listAllFiles(bucket, prefix);
 
+        //Include .keep files just in case
         const placeholders = [`${prefix}/`, `${prefix}/.keep`];
         const toDelete = Array.from(new Set([...files, ...placeholders]));
 
@@ -96,8 +89,11 @@ export async function POST(req: Request) {
             .remove(chunk);
 
           if (removeError) {
-            results[bucket] = { deleted: totalDeleted, error: removeError.message || String(removeError) };
-            console.error("Remove error", bucket, removeError);
+            console.error(`Remove error in bucket ${bucket}:`, removeError);
+            results[bucket] = {
+              deleted: totalDeleted,
+              error: removeError.message || String(removeError)
+            };
             continue;
           }
 
@@ -106,7 +102,7 @@ export async function POST(req: Request) {
 
         if (!results[bucket]) results[bucket] = { deleted: totalDeleted };
       } catch (e: any) {
-        console.error("Bucket processing failed", bucket, e);
+        console.error("Bucket processing failed:", bucket, e);
         results[bucket] = { deleted: 0, error: e.message || String(e) };
       }
     }
