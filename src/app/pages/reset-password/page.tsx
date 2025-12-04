@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
 
   const token = searchParams.get("access_token");
 
-  // Apply recovery session
+  //Apply recovery session
   useEffect(() => {
     const setupSession = async () => {
       if (!token) {
@@ -32,7 +32,6 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      // Correct Supabase reset flow
       const { error } = await supabase.auth.exchangeCodeForSession(token);
 
       if (error) {
@@ -55,18 +54,13 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const confirmErr = validateConfirmationPassword(
-      newPassword,
-      confirmPassword
-    );
+    const confirmErr = validateConfirmationPassword(newPassword, confirmPassword);
     setConfirmError(confirmErr);
     if (confirmErr) return;
 
     setSubmitting(true);
 
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
 
     if (error) {
       toast.error(error.message);
@@ -75,13 +69,22 @@ export default function ResetPasswordPage() {
     }
 
     toast.success("Password updated! Redirecting...");
-    setTimeout(() => router.push("/auth?mode=login"), 1500);
+    setTimeout(() => router.push("/login"), 1500);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-900">
-      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-8 w-full max-w-md">
+    <div className="min-h-screen relative flex items-center justify-center bg-gray-900">
+      {/* Blurred background */}
+      <div className="absolute inset-0">
+        <img
+          src="/bg-reset.png"
+          alt="Background"
+          className="w-full h-full object-cover filter blur-sm brightness-50"
+        />
+      </div>
 
+      {/* Form card */}
+      <div className="relative z-10 bg-white dark:bg-gray-800 shadow-2xl rounded-2xl p-8 w-full max-w-md">
         {loading ? (
           <Loader message="Validating reset link... 🔒" />
         ) : (
@@ -91,32 +94,30 @@ export default function ResetPasswordPage() {
             </h1>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-
               {/* New Password */}
               <div>
                 <input
                   type="password"
                   placeholder="New password"
-                  className={`w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 
-                    ${
-                      passwordErrors.length > 0
-                        ? "border-red-500"
-                        : "dark:border-gray-700 border-gray-300"
-                    }
-                    focus:ring-2 focus:ring-yellow-500`}
                   value={newPassword}
                   onChange={(e) => {
                     setNewPassword(e.target.value);
-                    setPasswordErrors([]);
+                    const { valid, errors } = handleStrongPassword(e.target.value);
+                    setPasswordErrors(errors);
                   }}
+                  className={`w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+                    ${passwordErrors.length > 0 ? "border-red-500" : "border-yellow-400"}
+                    focus:ring-2 focus:ring-yellow-500 transition`}
                 />
-                {passwordErrors.length > 0 && (
-                  <ul className="text-red-500 text-sm mt-1 space-y-1">
+                {passwordErrors.length > 0 ? (
+                  <ul className="text-red-500 text-sm mt-1 space-y-1 list-disc pl-5">
                     {passwordErrors.map((err, i) => (
-                      <li key={i}>• {err}</li>
+                      <li key={i}>{err}</li>
                     ))}
                   </ul>
-                )}
+                ) : newPassword ? (
+                  <p className="text-yellow-500 text-sm mt-1">Strong password ✅</p>
+                ) : null}
               </div>
 
               {/* Confirm Password */}
@@ -124,24 +125,21 @@ export default function ResetPasswordPage() {
                 <input
                   type="password"
                   placeholder="Confirm new password"
-                  className={`w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 
-                    ${
-                      confirmError
-                        ? "border-red-500"
-                        : "dark:border-gray-700 border-gray-300"
-                    }
-                    focus:ring-2 focus:ring-yellow-500`}
                   value={confirmPassword}
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
-                    setConfirmError("");
+                    setConfirmError(validateConfirmationPassword(newPassword, e.target.value));
                   }}
+                  className={`w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+                    ${confirmError ? "border-red-500" : "border-yellow-400"}
+                    focus:ring-2 focus:ring-yellow-500 transition`}
                 />
                 {confirmError && (
                   <p className="text-red-500 text-sm mt-1">{confirmError}</p>
                 )}
               </div>
 
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={submitting}
