@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
     }
 
     toast.success("Password updated! Redirecting...");
-    setTimeout(() => router.push("/login"), 1500);
+    setTimeout(() => router.push("/"), 1500);
   };
 
   return (
@@ -77,7 +77,7 @@ export default function ResetPasswordPage() {
       {/* Blurred background */}
       <div className="absolute inset-0">
         <img
-          src="/bg-reset.png"
+          src="/bg-register.png" /* Using register bg as placeholder */
           alt="Background"
           className="w-full h-full object-cover filter blur-sm brightness-50"
         />
@@ -106,17 +106,17 @@ export default function ResetPasswordPage() {
                     setPasswordErrors(errors);
                   }}
                   className={`w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-                    ${passwordErrors.length > 0 ? "border-red-500" : "border-yellow-400"}
-                    focus:ring-2 focus:ring-yellow-500 transition`}
+                    ${passwordErrors.length > 0 ? "border-red-600" : "border-gray-300 dark:border-gray-600"}
+                    focus:ring-2 focus:ring-green-500 transition`}
                 />
                 {passwordErrors.length > 0 ? (
-                  <ul className="text-red-500 text-sm mt-1 space-y-1 list-disc pl-5">
+                  <ul className="text-red-600 text-sm mt-1 space-y-1 list-disc pl-5">
                     {passwordErrors.map((err, i) => (
                       <li key={i}>{err}</li>
                     ))}
                   </ul>
                 ) : newPassword ? (
-                  <p className="text-yellow-500 text-sm mt-1">Strong password ✅</p>
+                  <p className="text-green-600 text-sm mt-1">Strong password ✅</p>
                 ) : null}
               </div>
 
@@ -131,11 +131,11 @@ export default function ResetPasswordPage() {
                     setConfirmError(validateConfirmationPassword(newPassword, e.target.value));
                   }}
                   className={`w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-                    ${confirmError ? "border-red-500" : "border-yellow-400"}
-                    focus:ring-2 focus:ring-yellow-500 transition`}
+                    ${confirmError ? "border-red-600" : "border-gray-300 dark:border-gray-600"}
+                    focus:ring-2 focus:ring-green-500 transition`}
                 />
                 {confirmError && (
-                  <p className="text-red-500 text-sm mt-1">{confirmError}</p>
+                  <p className="text-red-600 text-sm mt-1">{confirmError}</p>
                 )}
               </div>
 
@@ -143,10 +143,22 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 transition"
+                className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
               >
                 {submitting ? "Updating..." : "Update Password"}
               </button>
+
+              {/* Back to login */}
+              <p className="text-sm text-center mt-2">
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="text-indigo-600 hover:underline"
+                >
+                  Login
+                </button>
+              </p>
             </form>
           </>
         )}
