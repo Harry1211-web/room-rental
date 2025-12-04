@@ -5,8 +5,10 @@ import { supabase } from "@/lib/supabaseClient";
 import { Loader } from "@/components/Loader";
 import { toast } from "sonner";
 import { useSearchParams, useRouter } from "next/navigation";
-import { handleStrongPassword, validateConfirmationPassword } from "../auth/helpers/validation"; 
-
+import {
+  handleStrongPassword,
+  validateConfirmationPassword,
+} from "../auth/helpers/validation";
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
@@ -21,43 +23,42 @@ export default function ResetPasswordPage() {
 
   const token = searchParams.get("access_token");
 
+  // Apply recovery session
   useEffect(() => {
-    const applyRecoverySession = async () => {
+    const setupSession = async () => {
       if (!token) {
         toast.error("Invalid or missing reset token.");
         setLoading(false);
         return;
       }
 
-      const { error } = await supabase.auth.setSession({
-        access_token: token,
-        refresh_token: token,
-      });
+      // Correct Supabase reset flow
+      const { error } = await supabase.auth.exchangeCodeForSession(token);
 
       if (error) {
-        toast.error("Reset link expired or invalid.");
+        toast.error("Reset link is expired or invalid.");
       }
 
       setLoading(false);
     };
 
-    applyRecoverySession();
+    setupSession();
   }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    //Strong password validation
     const { valid, errors } = handleStrongPassword(newPassword);
     setPasswordErrors(errors);
-
     if (!valid) {
       toast.error("Password is too weak.");
       return;
     }
 
-    //Confirmation validation
-    const confirmErr = validateConfirmationPassword(newPassword, confirmPassword);
+    const confirmErr = validateConfirmationPassword(
+      newPassword,
+      confirmPassword
+    );
     setConfirmError(confirmErr);
     if (confirmErr) return;
 
@@ -74,67 +75,84 @@ export default function ResetPasswordPage() {
     }
 
     toast.success("Password updated! Redirecting...");
-
-    setTimeout(() => router.push("/login"), 1500);
+    setTimeout(() => router.push("/auth?mode=login"), 1500);
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-md mx-auto">
-      {loading ? (
-        <Loader message="Validating reset link... 🔒" />
-      ) : (
-        <>
-          <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-gray-100">
-            Reset Your Password
-          </h1>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-8 w-full max-w-md">
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        {loading ? (
+          <Loader message="Validating reset link... 🔒" />
+        ) : (
+          <>
+            <h1 className="text-3xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">
+              Reset Your Password
+            </h1>
 
-            <input
-              type="password"
-              placeholder="New password"
-              className="w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-yellow-500"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setPasswordErrors([]);
-              }}
-            />
+            <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* Password errors */}
-            {passwordErrors.length > 0 && (
-              <ul className="text-red-500 text-sm space-y-1">
-                {passwordErrors.map((err, i) => (
-                  <li key={i}>• {err}</li>
-                ))}
-              </ul>
-            )}
+              {/* New Password */}
+              <div>
+                <input
+                  type="password"
+                  placeholder="New password"
+                  className={`w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 
+                    ${
+                      passwordErrors.length > 0
+                        ? "border-red-500"
+                        : "dark:border-gray-700 border-gray-300"
+                    }
+                    focus:ring-2 focus:ring-yellow-500`}
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setPasswordErrors([]);
+                  }}
+                />
+                {passwordErrors.length > 0 && (
+                  <ul className="text-red-500 text-sm mt-1 space-y-1">
+                    {passwordErrors.map((err, i) => (
+                      <li key={i}>• {err}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
-            <input
-              type="password"
-              placeholder="Confirm new password"
-              className="w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-yellow-500"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setConfirmError("");
-              }}
-            />
+              {/* Confirm Password */}
+              <div>
+                <input
+                  type="password"
+                  placeholder="Confirm new password"
+                  className={`w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 
+                    ${
+                      confirmError
+                        ? "border-red-500"
+                        : "dark:border-gray-700 border-gray-300"
+                    }
+                    focus:ring-2 focus:ring-yellow-500`}
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setConfirmError("");
+                  }}
+                />
+                {confirmError && (
+                  <p className="text-red-500 text-sm mt-1">{confirmError}</p>
+                )}
+              </div>
 
-            {confirmError && (
-              <p className="text-red-500 text-sm">{confirmError}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 transition"
-            >
-              {submitting ? "Updating..." : "Update Password"}
-            </button>
-          </form>
-        </>
-      )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 transition"
+              >
+                {submitting ? "Updating..." : "Update Password"}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
     </div>
   );
 }
