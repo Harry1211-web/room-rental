@@ -70,7 +70,7 @@ export default function Navbar() {
           className="dark:invert"
           style={{ width: "auto", height: "auto" }}
         />
-        <span className="font-bold text-xl text-gray-800 dark:text-gray-100">
+        <span className="font-bold text-xl text-gray-800 dark:text-gray-100 truncate max-w-[120px] sm:max-w-[200px]">
           Room Rental
         </span>
       </div>
@@ -123,13 +123,13 @@ export default function Navbar() {
                     e.currentTarget.src = "/avatar_default.jpg";
                   }}
                 />
-                <span className="font-medium text-gray-800 dark:text-gray-100 transition-colors duration-300">
+                <span className="font-medium text-gray-800 dark:text-gray-100 transition-colors duration-300 truncate max-w-[80px]">
                   {role}
                 </span>
               </button>
 
               {dropdownMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
+                <div className="absolute right-0 mt-2 w-56 max-w-[90vw] bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
                   <div className="absolute -top-2 right-4 w-3 h-3 bg-white/90 dark:bg-gray-800/90 transform rotate-45 border-t border-l border-gray-200 dark:border-gray-700"></div>
                   <div className="flex flex-col py-2">
                     {role === "landlord" && (
@@ -164,7 +164,7 @@ export default function Navbar() {
                     </button>
                     <Button
                       onClick={logout}
-                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 m-2 rounded-md transition-colors duration-300"
+                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 m-2 rounded-md transition-colors duration-300 w-[calc(100%-16px)]"
                     >
                       Logout
                     </Button>
@@ -192,22 +192,22 @@ export default function Navbar() {
             <Button onClick={() => handleMenuClick("/")}>🏠 Home</Button>
           ) : !loading && !isLoggedIn ? (
             <>
-              <Button onClick={() => handleMenuClick("/pages/auth?mode=login")}>Login</Button>
-              <Button onClick={() => handleMenuClick("/pages/auth?mode=register")}>Sign Up</Button>
+              <Button onClick={() => handleMenuClick("/pages/auth?mode=login")} className="w-full">Login</Button>
+              <Button onClick={() => handleMenuClick("/pages/auth?mode=register")} className="w-full">Sign Up</Button>
             </>
           ) : (
             <>
               {role === "landlord" && (
-                <Button onClick={() => handleMenuClick("/pages/rooms")}>Manage Rooms</Button>
+                <Button onClick={() => handleMenuClick("/pages/rooms")} className="w-full">Manage Rooms</Button>
               )}
               {role !== "admin" && (
                 <>
-                  <Button onClick={() => handleMenuClick("/pages/history_bookings")}>Booking History</Button>
-                  <Button onClick={() => handleMenuClick("/pages/reports")}>Reports</Button>
+                  <Button onClick={() => handleMenuClick("/pages/history_bookings")} className="w-full">Booking History</Button>
+                  <Button onClick={() => handleMenuClick("/pages/reports")} className="w-full">Reports</Button>
                 </>
               )}
-              <Button onClick={() => handleMenuClick(`/pages/user/${idUser}`)}>Profile & Settings</Button>
-              <Button onClick={logout} className="bg-red-500 hover:bg-red-600 text-white">Logout</Button>
+              <Button onClick={() => handleMenuClick(`/pages/user/${idUser}`)} className="w-full">Profile & Settings</Button>
+              <Button onClick={logout} className="w-full bg-red-500 hover:bg-red-600 text-white">Logout</Button>
             </>
           )}
         </div>

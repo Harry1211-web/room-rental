@@ -386,7 +386,7 @@ export default function UserPage() {
           width={140}
           height={140}
           alt={user.name}
-          className="rounded-full object-cover shadow-lg w-36 h-36"
+          className="rounded-full object-cover shadow-lg w-24 h-24 sm:w-36 sm:h-36"
         />
         <div className="text-center sm:text-left w-full max-w-md">
           {isOwner && editing ? (

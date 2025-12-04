@@ -1,15 +1,17 @@
+// app/api/admin/delete-leftovers/route.ts
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 
 const PAGE_SIZE = 100;
-const CHUNK_DELETE = 100; //number of paths to remove per request
+const CHUNK_DELETE = 100;
 
 async function listAllFiles(bucket: string, prefix: string) {
   const results: string[] = [];
   let page = 0;
 
   while (true) {
-    //v2 list signature: .list(prefix, { limit, offset, sortBy })
     const { data, error } = await supabaseAdmin.storage
       .from(bucket)
       .list(prefix, { limit: PAGE_SIZE, offset: page * PAGE_SIZE });
@@ -19,11 +21,9 @@ async function listAllFiles(bucket: string, prefix: string) {
 
     for (const item of data as any[]) {
       if (item.type === "folder") {
-        //recurse into folder
         const nested = await listAllFiles(bucket, `${prefix}/${item.name}`);
         results.push(...nested);
       } else {
-        //file: construct full key relative to bucket root
         results.push(`${prefix}/${item.name}`);
       }
     }
@@ -41,7 +41,38 @@ export async function POST(req: Request) {
     const { userId } = body;
     if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
-    const buckets = ["avatars", "room_images", "proof"]; //adjust as needed
+    // -----------------------------
+    // 🔐 Verify admin user via session cookie
+    // -----------------------------
+    const supabaseServer = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { cookie: cookies().toString() } } }
+    );
+
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseServer.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabaseServer
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // -----------------------------
+    // 🔥 Safe to delete files
+    // -----------------------------
+    const buckets = ["avatars", "room_images", "proof"];
     const results: Record<string, { deleted: number; error?: string }> = {};
 
     for (const bucket of buckets) {
@@ -65,7 +96,6 @@ export async function POST(req: Request) {
             .remove(chunk);
 
           if (removeError) {
-            //record and continue
             results[bucket] = { deleted: totalDeleted, error: removeError.message || String(removeError) };
             console.error("Remove error", bucket, removeError);
             continue;
