@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "./context/Usercontext";
 import { useAuthSync } from "./useAuthSync";
 import AdminPage from "./pages/main/AdminPage";
-import RecomendPage from "./pages/main/RecomendPage";
+import RecommendPage from "./pages/main/RecommendPage";
 import { Footer } from "../components/Footer";
 
 export default function Home() {
@@ -57,7 +57,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-1 pt-24"> {/*Added flex layout */}
-        {role === "admin" ? <AdminPage /> : <RecomendPage />}
+        {role === "admin" ? <AdminPage /> : <RecommendPage />}
       </main>
       {role !== "admin" && <Footer />} {/* Add footer component only for non-admin users */}
     </div>
