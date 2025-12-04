@@ -236,9 +236,11 @@ const deleteRoom = async (id: string) => {
 
   const filteredRooms = rooms
     .filter((r) => {
+      const roomTitle = r.title ?? ""; 
+      const landlordName = r.landlordName ?? "";
       const matchesSearch =
-        r.title.toLowerCase().includes(search.toLowerCase()) ||
-        r.landlordName.toLowerCase().includes(search.toLowerCase());
+        roomTitle.toLowerCase().includes(search.toLowerCase()) ||
+        landlordName.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = filterStatus === "all" || r.status === filterStatus;
       const matchesTag = filterTag === "all" || r.tags.some(tag => getRoomTagKey(tag) === filterTag);
       return matchesSearch && matchesStatus && matchesTag;
