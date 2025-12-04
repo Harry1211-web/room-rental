@@ -11,7 +11,7 @@ export default function Home() {
   const { role, loading, setLoading } = useUser();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false); 
-  useEffect (() => {setLoading(false)})
+  useEffect (() => {setLoading(false)}, [])
   useAuthSync(60);
 
   const preloadImages = async () => {

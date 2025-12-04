@@ -239,8 +239,8 @@ const deleteRoom = async (id: string) => {
       const roomTitle = r.title ?? ""; 
       const landlordName = r.landlordName ?? "";
       const matchesSearch =
-        roomTitle.toLowerCase().includes(search.toLowerCase()) ||
-        landlordName.toLowerCase().includes(search.toLowerCase());
+        (roomTitle?.toLowerCase() ?? "").includes(search.toLowerCase()) ||
+        (landlordName?.toLowerCase() ?? "").includes(search.toLowerCase());
       const matchesStatus = filterStatus === "all" || r.status === filterStatus;
       const matchesTag = filterTag === "all" || r.tags.some(tag => getRoomTagKey(tag) === filterTag);
       return matchesSearch && matchesStatus && matchesTag;
@@ -564,9 +564,9 @@ function TagManager({
   const [searchTag, setSearchTag] = useState("");
 
   const filteredTags = tags.filter((t) =>
-    t.value.toLowerCase().includes(searchTag.toLowerCase()) ||
-    t.id.toLowerCase().includes(searchTag.toLowerCase()) ||
-    t.value_type.toLowerCase().includes(searchTag.toLowerCase())
+    (t.value?.toLowerCase() ?? "").includes(searchTag.toLowerCase()) ||
+    (t.id?.toLowerCase() ?? "").includes(searchTag.toLowerCase()) ||
+    (t.value_type?.toLowerCase() ?? "").includes(searchTag.toLowerCase())
   );
 
   return (
