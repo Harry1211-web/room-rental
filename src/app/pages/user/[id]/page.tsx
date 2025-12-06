@@ -280,7 +280,7 @@ export default function UserPage() {
       setNewAvatarFile(null);
       setPreviewAvatar(null); //Reset preview
       
-      //Reset input file ref sau khi lưu
+      // Reset input file ref after saving
       if (fileInputRef.current) {
           fileInputRef.current.value = "";
       }
@@ -386,7 +386,7 @@ export default function UserPage() {
           width={140}
           height={140}
           alt={user.name}
-          className="rounded-full object-cover shadow-lg w-24 h-24 sm:w-36 sm:h-36"
+          className="rounded-full object-cover shadow-lg w-36 h-36"
         />
         <div className="text-center sm:text-left w-full max-w-md">
           {isOwner && editing ? (
@@ -420,7 +420,7 @@ export default function UserPage() {
               <div>
                 <label className="block mb-1 text-sm font-medium">New Avatar (Optional):</label>
                 
-                {/* Ẩn input file gốc và gán ref */}
+                {/* Hide the original file input and assign ref */}
                 <input
                   type="file"
                   accept="image/*"
@@ -446,18 +446,18 @@ export default function UserPage() {
                   }}
                 />
 
-                {/* Button tùy chỉnh để kích hoạt input file */}
+                {/* Custom button to trigger the file input */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full bg-gray-100 dark:bg-gray-700 border border-dashed border-gray-400 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                 >
-                  {/* Hiển thị tên file nếu đã chọn, hoặc text mặc định */}
+                  {/* Display the file name if selected, or default text */}
                   {newAvatarFile ? `Selected: ${newAvatarFile.name}` : "Click to choose a new image"}
                 </button>
               </div>
               
-              {/* NÚT XÓA AVATAR HIỆN TẠI */}
+              {/* Current Avatar Delete Button */}
               {(user.avatar_url || newAvatarFile) && (
                 <button
                   type="button"

@@ -74,39 +74,41 @@ export default function UsersPage() {
     }
   }
 
-  async function handleDelete(u: User) {
-    if (!confirm(`Are you sure you want to delete user: ${u.name ?? u.email}? This action is irreversible.`)) return;
+async function handleDelete(u: User) {
+  if (!confirm(`Are you sure you want to delete user: ${u.name ?? u.email}? This action is irreversible.`)) return;
+  
+  try {
+    // 1. Xóa record người dùng khỏi bảng 'users'
+    const { error: dbError } = await supabase.from("users").delete().eq("id", u.id);
+    if (dbError) throw dbError;
 
-    try {
-      const { error: dbError } = await supabase.from("users").delete().eq("id", u.id);
-      if (dbError) throw dbError;
+    // 2. Xóa ảnh đại diện liên quan bằng cách gọi API route /api/avatar
+    const formData = new FormData();
+    formData.append("userId", u.id); 
 
-      const formData = new FormData();
-      formData.append("userId", u.id);
+    const res = await fetch("/api/avatar", {
+      method: "DELETE",
+      body: formData,
+    });
 
-      const res = await fetch("/api/avatar", {
-        method: "DELETE",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.warn("User deleted, but failed to delete avatar:", errorData.error);
-      }
-
-      toast.success("User and associated avatar deleted successfully!");
-      fetchUsers();
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      toast.error(`Cannot be deleted! ${error instanceof Error ? error.message : "An unknown error occurred."}`);
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.warn("User deleted, but failed to delete avatar:", errorData.error);
     }
+    
+    toast.success("User and associated avatar deleted successfully!");
+    fetchUsers(); 
+
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    toast.error(`Cannot be deleted! ${error instanceof Error ? error.message : "An unknown error occurred."}`);
   }
+}
 
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">👥 Users management</h1>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <input
           type="text"
@@ -116,7 +118,7 @@ export default function UsersPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="border dark:border-gray-700 p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full sm:w-auto"
+          className="border dark:border-gray-700 p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as RoleType | "all")}
         >
@@ -126,7 +128,7 @@ export default function UsersPage() {
           <option value="landlord">Landlord</option>
         </select>
         <select
-          className="border dark:border-gray-700 p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full sm:w-auto"
+          className="border dark:border-gray-700 p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusType | "all")}
         >
@@ -137,95 +139,71 @@ export default function UsersPage() {
         </select>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <DataTable<User>
-          columns={[
-            {
-              key: "id",
-              label: "ID",
-              render: (row) => (
-                <HoverCard
-                  content={
-                    <div className="text-gray-900 dark:text-gray-100">
-                      <p>
-                        <strong className="text-gray-900 dark:text-gray-100">Full ID:</strong> {row.id}
-                      </p>
-                    </div>
-                  }
-                >
-                  <span className="cursor-help" title={row.id}>
-                    {row.id.substring(0, 12)}...
-                  </span>
-                </HoverCard>
-              ),
-            },
-            {
-              key: "name",
-              label: "Name",
-              render: (row) => (
-                <HoverCard
-                  content={
-                    <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-                      <p>
-                        <strong>Email:</strong> {row.email}
-                      </p>
-                      {row.phone_number && (
-                        <p>
-                          <strong>Phone:</strong> {row.phone_number}
-                        </p>
-                      )}
-                      <p>
-                        <strong>Role:</strong> {row.role}
-                      </p>
-                      <p>
-                        <strong>Status:</strong> {row.status}
-                      </p>
-                      <p>
-                        <strong>Created:</strong> {new Date(row.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                  }
-                >
-                  <button
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                    onClick={() => router.push(`/pages/user/${row.id}`)}
-                  >
-                    {row.name ?? "—"}
-                  </button>
-                </HoverCard>
-              ),
-            },
-            { key: "email", label: "Email", render: (row) => <span className="min-w-[180px] block truncate">{row.email}</span> },
-            { key: "phone_number", label: "Phone", render: (row) => <span className="min-w-[120px] block truncate">{row.phone_number}</span> },
-            { key: "role", label: "Role", render: (row) => <span className="capitalize">{row.role}</span> },
-            { key: "status", label: "Status", render: (row) => <span className="capitalize">{row.status}</span> },
-            {
-              key: undefined,
-              label: "Actions",
-              render: (row) => (
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => setEditingUser(row)}
-                    className="bg-blue-600 text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-all duration-150 font-semibold"
-                  >
-                    Update
-                  </button>
-                  <button
-                    onClick={() => handleDelete(row)}
-                    className="bg-red-600 text-white px-4 py-1 rounded-lg hover:bg-red-700 transition-all duration-150 font-semibold"
-                  >
-                    Delete
-                  </button>
+      <DataTable<User>
+        columns={[
+          { 
+            key: "id", 
+            label: "ID",
+            render: (row) => (
+              <HoverCard content={
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Full ID:</strong> {row.id}</p>
                 </div>
-              )
-            },
-          ]}
-          data={filtered}
-        />
-      </div>
+              }>
+                <span className="cursor-help" title={row.id}>
+                  {row.id.substring(0, 12)}...
+                </span>
+              </HoverCard>
+            )
+          },
+          { 
+            key: "name", 
+            label: "Name",
+            render: (row) => (
+              <HoverCard content={
+                <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {row.email}</p>
+                  {row.phone_number && <p><strong className="text-gray-900 dark:text-gray-100">Phone:</strong> {row.phone_number}</p>}
+                  <p><strong className="text-gray-900 dark:text-gray-100">Role:</strong> {row.role}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Status:</strong> {row.status}</p>
+                  <p><strong className="text-gray-900 dark:text-gray-100">Created:</strong> {new Date(row.created_at).toLocaleString()}</p>
+                </div>
+              }>
+                <button className="text-blue-600 dark:text-blue-400 hover:underline font-medium" onClick={() => router.push(`/pages/user/${row.id}`)}>
+                  {row.name ?? "—"}
+                </button>
+              </HoverCard>
+            )
+          },
+          { key: "email", label: "Email", width: "w-[250px]" },
+          { key: "phone_number", label: "Phone", width: "w-[120px]" },
+          { key: "role", label: "Role", width: "w-[80px]" },
+          { key: "status", label: "Status", width: "w-[90px]" },
+          { 
+            key: undefined, 
+            label: "Actions",
+            render: (row) => (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditingUser(row)}
+                  className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700 transition-all duration-150 font-semibold"
+                >
+                  Update
+                </button>
+                <button
+                  onClick={() => handleDelete(row)}
+                  className="bg-red-600 text-white px-4 py-1 rounded-lg hover:bg-red-700 transition-all duration-150 font-semibold"
+                >
+                  Delete
+                </button>
+              </div>
+            )
+          },
+        ]}
+        data={filtered}
+      />
 
-      {/* Editable Popup */}
+
       {editingUser && (
         <EditablePopup
           open={!!editingUser}

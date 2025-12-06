@@ -159,7 +159,7 @@ async function handleDelete(v: Verification) {
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">✅ Verifications</h1>
 
       {/* 🔍 Search & Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
+      <div className="flex flex-wrap gap-4 mb-4">
         <input
           type="text"
           placeholder="Search landlord name, email, or ID"
@@ -167,13 +167,12 @@ async function handleDelete(v: Verification) {
           onChange={(e) => setSearch(e.target.value)}
           className="border dark:border-gray-700 px-3 py-2 rounded shadow-sm w-full sm:w-96 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         />
-        
         <select
           value={filterStatus}
           onChange={(e) =>
             setFilterStatus(e.target.value as (typeof statusOptions)[number])
           }
-          className="border dark:border-gray-700 px-3 py-2 rounded shadow-sm w-full sm:w-52 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          className="border dark:border-gray-700 px-3 py-2 rounded shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         >
           {statusOptions.map((opt) => (
             <option key={opt} value={opt}>
@@ -195,11 +194,11 @@ async function handleDelete(v: Verification) {
             label: "ID",
             render: (r) => r.landlord_id ? (
               <HoverCard content={
-                <div className="text-gray-900 dark:text-gray-100 text-sm">
-                  <p><strong>Full ID:</strong> {r.landlord_id}</p>
+                <div className="text-gray-900 dark:text-gray-100">
+                  <p><strong className="text-gray-900 dark:text-gray-100">Full ID:</strong> {r.landlord_id}</p>
                 </div>
               }>
-                <span className="cursor-help block truncate max-w-[150px]" title={r.landlord_id}>
+                <span className="cursor-help" title={r.landlord_id}>
                   {r.landlord_id.substring(0, 12)}...
                 </span>
               </HoverCard>
@@ -213,14 +212,14 @@ async function handleDelete(v: Verification) {
                 <HoverCard
                   content={
                     <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-                      <p><strong>Name:</strong> {r.users?.name ?? "N/A"}</p>
-                      <p><strong>Email:</strong> {r.users?.email ?? "N/A"}</p>
-                      <p><strong>ID:</strong> {r.landlord_id}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.users?.name ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {r.users?.email ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.landlord_id}</p>
                     </div>
                   }
                 >
                   <button
-                    className="text-blue-600 dark:text-blue-400 hover:underline truncate block max-w-[200px]"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
                     onClick={() => router.push(`pages/user/${r.landlord_id}`)}
                   >
                     {r.users?.name ?? r.users?.email ?? "No name"}
@@ -236,27 +235,32 @@ async function handleDelete(v: Verification) {
                 <HoverCard
                   content={
                     <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-                      <p><strong>Name:</strong> {r.room?.name ?? "N/A"}</p>
-                      <p><strong>ID:</strong> {r.room_id}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.room?.name ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.room_id}</p>
                     </div>
                   }
                 >
-                  <span className="truncate block max-w-[150px]">{r.room?.name}</span>
+                  <button
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    onClick={() => router.push(`pages/user/${r.landlord_id}`)}
+                  >
+                    {r.users?.name ?? r.users?.email ?? "No name"}
+                  </button>
                 </HoverCard>
               ) : "—",
           },
-          { key: "type", label: "Type of verification", render: (r) => <span className="truncate block max-w-[150px]">{r.type ?? "—"}</span> },
+          { key: "type", label: "Type of verification" },
           {
             key: "proof",
-            label: "Proof",
+            label: "Proof picture",
             render: (r) =>
               r.proof ? (
-                <button className="block" onClick={() => setPreviewImage(r.proof ?? null)}>
+                <button onClick={() => setPreviewImage(r.proof ?? null)}>
                   <Image
                     src={r.proof}
                     alt="Proof"
-                    width={64}
-                    height={64}
+                    width={96}
+                    height={96}
                     className="object-cover rounded cursor-pointer shadow-sm hover:opacity-90 transition"
                   />
                 </button>
@@ -265,7 +269,8 @@ async function handleDelete(v: Verification) {
           {
             key: "created_at",
             label: "Date sent",
-            render: (r) => <span className="truncate block max-w-[100px]">{new Date(r.created_at).toLocaleDateString()}</span>,
+            width: "w-[100px]",
+            render: (r) => new Date(r.created_at).toLocaleDateString(),
           },
           {
             key: "verified",
@@ -273,7 +278,7 @@ async function handleDelete(v: Verification) {
             render: (r) => (
               <button
                 onClick={() => updateStatus(r.id, r.verified)}
-                className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 transition-all duration-200 shadow-sm whitespace-nowrap ${
+                className={`px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-1 transition-all duration-200 shadow-sm ${
                   r.verified
                     ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800"
                     : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800"
