@@ -53,7 +53,7 @@ export function HoverCard({ children, content }: HoverCardProps) {
   return (
     <div
       ref={triggerRef}
-      className="inline-block"
+      className="contents"
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
     >
