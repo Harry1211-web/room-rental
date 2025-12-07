@@ -5,14 +5,13 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import Image from "next/image";
-import { Eye, EyeOff } from "lucide-react";
 import {
   handleStrongPassword,
   validateEmail,
   validatePhone,
   validateName,
-  validateConfirmationPassword,
-} from "./helpers/validation"; // Correctly using validation helpers
+  validateConfirmationPassword
+} from "./helpers/validation";
 
 interface RegisterFormProps {
   setMode: (mode: "login" | "register" | "forgot") => void;
@@ -20,9 +19,6 @@ interface RegisterFormProps {
 
 export default function RegisterForm({ setMode }: RegisterFormProps) {
   // ===== State =====
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -38,86 +34,58 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
   // ===== Handlers =====
   const handleNameChange = (value: string) => {
     setName(value);
-    setFieldErrors((prev) => ({ ...prev, name: validateName(value) }));
+    setFieldErrors(prev => ({ ...prev, name: validateName(value) }));
   };
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
-    setFieldErrors((prev) => ({ ...prev, email: validateEmail(value) }));
+    setFieldErrors(prev => ({ ...prev, email: validateEmail(value) }));
   };
 
   const handlePhoneChange = (value: string) => {
     setPhone(value);
-    setFieldErrors((prev) => ({ ...prev, phone: validatePhone(value) }));
+    setFieldErrors(prev => ({ ...prev, phone: validatePhone(value) }));
   };
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
     const { valid, errors } = handleStrongPassword(value);
-    // Set password errors for display
     setPasswordErrors(!value.trim() ? errors : valid ? [] : errors);
 
-    // Clear field error for password if needed, but the list is enough
-    if (fieldErrors.password)
-      setFieldErrors((prev) => ({ ...prev, password: "" }));
-
+    if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: "" }));
     // Re-validate confirmation password when password changes
-    setFieldErrors((prev) => ({
+    setFieldErrors(prev => ({
       ...prev,
-      confirmationPassword: validateConfirmationPassword(
-        value,
-        confirmationPassword
-      ),
+      confirmationPassword: validateConfirmationPassword(value, confirmationPassword)
     }));
   };
 
   const handleConfirmationChange = (value: string) => {
     setConfirmationPassword(value);
-    setFieldErrors((prev) => ({
+    setFieldErrors(prev => ({
       ...prev,
-      confirmationPassword: validateConfirmationPassword(password, value),
+      confirmationPassword: validateConfirmationPassword(password, value)
     }));
   };
 
   const handleAvatarChange = (file: File | null) => {
     setAvt(file);
-    if (fieldErrors.avt) setFieldErrors((prev) => ({ ...prev, avt: "" }));
+    if (fieldErrors.avt) setFieldErrors(prev => ({ ...prev, avt: "" }));
   };
 
-  // ===== Final form validation on submit (Refactored) =====
+  // ===== Final form validation on submit =====
   const validateFieldsOnSubmit = () => {
     const errors: Record<string, string> = {};
 
-    // Use validation helpers for all fields
-    const nameError = validateName(name);
-    if (nameError) errors.name = nameError;
-
-    const emailError = validateEmail(email);
-    if (emailError) errors.email = emailError;
-
-    const phoneError = validatePhone(phone);
-    if (phoneError) errors.phone = phoneError;
-
-    const passwordConfirmationError = validateConfirmationPassword(
-      password,
-      confirmationPassword
-    );
-    if (passwordConfirmationError)
-      errors.confirmationPassword = passwordConfirmationError;
-
-    // Check for password strength (separate from confirmation)
-    const { valid, errors: pErrors } = handleStrongPassword(password);
-    if (pErrors.length > 0) {
-      // If there are password strength errors, they should be set to passwordErrors state
-      // But we also need a field error if the password field itself is empty
-      if (!password.trim()) {
-        errors.password = "Password is required.";
-      }
-      setPasswordErrors(pErrors);
-    } else {
-      setPasswordErrors([]);
-    }
-
+    if (!name.trim()) errors.name = "Full name is required.";
+    if (!email.trim()) errors.email = "Email is required.";
+    if (!phone.trim()) errors.phone = "Phone number is required.";
+    if (!password) errors.password = "Password is required.";
+    if (!confirmationPassword) errors.confirmationPassword = "Confirm password is required.";
+    if (password && confirmationPassword && password !== confirmationPassword)
+      errors.confirmationPassword = "Passwords do not match.";
+    if (phone && !/^\d{10}$/.test(phone))
+      errors.phone = "Phone number must be 10 digits.";
 
     return errors;
   };
@@ -127,14 +95,8 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
     e.preventDefault();
 
     const newErrors = validateFieldsOnSubmit();
-    // Check if the password strength validation failed and add a generic error if it didn't already
-    if (passwordErrors.length > 0 && !newErrors.password) {
-        newErrors.password = "Password does not meet strength requirements.";
-    }
-
     setFieldErrors(newErrors);
-    // Re-check for any validation errors, including password strength
-    if (Object.keys(newErrors).length > 0 || passwordErrors.length > 0) return;
+    if (Object.keys(newErrors).length > 0) return;
 
     setLoading(true);
 
@@ -146,7 +108,7 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         .eq("email", email);
 
       if (existingEmail?.length) {
-        setFieldErrors((prev) => ({ ...prev, email: "Email already exists." }));
+        setFieldErrors(prev => ({ ...prev, email: "Email already exists." }));
         setLoading(false);
         return;
       }
@@ -158,23 +120,19 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         .eq("phone_number", phone);
 
       if (existingPhone?.length) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          phone: "Phone number already exists.",
-        }));
+        setFieldErrors(prev => ({ ...prev, phone: "Phone number already exists." }));
         setLoading(false);
         return;
       }
 
       // Sign up user
-      const { data: signUpData, error: signUpError } =
-        await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { name, phone_number: phone, role },
-          },
-        });
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name, phone_number: phone, role }
+        }
+      });
 
       if (signUpError) {
         setFieldErrors({ general: signUpError.message });
@@ -189,37 +147,31 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         return;
       }
 
-      // Show success message immediately
+      // ✅ Show success immediately
       toast.success("📩 Account created! Please confirm your email.");
       setMode("login");
 
       // Background avatar upload
       (async () => {
         try {
-          let avatarUrl =
-            "https://bfohmdgcgylgbdmpqops.supabase.co/storage/v1/object/public/avatars/avatar_default.jpg";
+          let avatarUrl = "https://bfohmdgcgylgbdmpqops.supabase.co/storage/v1/object/public/avatars/avatar_default.jpg";
 
           if (avt) {
             const formData = new FormData();
             formData.append("file", avt);
             formData.append("userId", userId);
 
-            const res = await fetch("/api/avatar", {
-              method: "POST",
-              body: formData,
-            });
+            const res = await fetch("/api/avatar", { method: "POST", body: formData });
             const data = await res.json();
             if (res.ok) avatarUrl = data.avatarUrl;
           }
 
-          await supabaseAdmin
-            .from("users")
-            .update({ avatar_url: avatarUrl })
-            .eq("id", userId);
+          await supabaseAdmin.from("users").update({ avatar_url: avatarUrl }).eq("id", userId);
         } catch (err) {
           console.error("Background avatar update error:", err);
         }
       })();
+
     } catch (err) {
       console.error("Registration error:", err);
       setFieldErrors({ general: "Unexpected error occurred." });
@@ -228,127 +180,72 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
     }
   };
 
-  // ===== JSX (unchanged) =====
+  // ===== JSX =====
   return (
-    <form onSubmit={handleRegister} className="space-y-3 ">
+    <form onSubmit={handleRegister} className="space-y-3">
+
       {/* Name */}
       <input
         type="text"
         placeholder="Full name"
         value={name}
-        onChange={(e) => handleNameChange(e.target.value)}
+        onChange={e => handleNameChange(e.target.value)}
         className="w-full border p-2 rounded"
       />
-      {fieldErrors.name && (
-        <p className="text-red-500 text-sm">{fieldErrors.name}</p>
-      )}
+      {fieldErrors.name && <p className="text-red-500 text-sm">{fieldErrors.name}</p>}
 
       {/* Email */}
       <input
         type="email"
         placeholder="Email"
         value={email}
-        onChange={(e) => handleEmailChange(e.target.value)}
+        onChange={e => handleEmailChange(e.target.value)}
         className="w-full border p-2 rounded"
       />
-      {fieldErrors.email && (
-        <p className="text-red-500 text-sm">{fieldErrors.email}</p>
-      )}
+      {fieldErrors.email && <p className="text-red-500 text-sm">{fieldErrors.email}</p>}
 
       {/* Phone */}
       <input
         type="text"
         placeholder="Phone number"
         value={phone}
-        onChange={(e) => handlePhoneChange(e.target.value)}
+        onChange={e => handlePhoneChange(e.target.value)}
         className="w-full border p-2 rounded"
       />
-      {fieldErrors.phone && (
-        <p className="text-red-500 text-sm">{fieldErrors.phone}</p>
-      )}
+      {fieldErrors.phone && <p className="text-red-500 text-sm">{fieldErrors.phone}</p>}
 
       {/* Password */}
-      <div className="relative">
-        <input
-          type={showPassword ? "text" : "password"}
-          placeholder="Password"
-          value={password}
-          onChange={(e) => handlePasswordChange(e.target.value)}
-          className="w-full border p-2 pr-10 rounded"
-        />
-
-        {/* Toggle */}
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
-        >
-          {showPassword ? <Eye /> : <EyeOff />}
-        </button>
-      </div>
-
-      {fieldErrors.password && (
-        <p className="text-red-500 text-sm mt-1">{fieldErrors.password}</p>
-      )}
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={e => handlePasswordChange(e.target.value)}
+        className="w-full border p-2 rounded"
+      />
+      {fieldErrors.password && <p className="text-red-500 text-sm mt-1">{fieldErrors.password}</p>}
       {passwordErrors.length > 0 ? (
         <ul className="text-red-500 text-sm mt-1 list-disc pl-5">
-          {passwordErrors.map((err, i) => (
-            <li key={i}>{err}</li>
-          ))}
+          {passwordErrors.map((err, i) => <li key={i}>{err}</li>)}
         </ul>
-      ) : (
-        password && (
-          <p className="text-green-500 text-sm mt-1">Strong password ✅</p>
-        )
-      )}
+      ) : password && <p className="text-green-500 text-sm mt-1">Strong password ✅</p>}
 
       {/* Confirm Password */}
-      <div className="relative">
-        <input
-          type={showConfirm ? "text" : "password"}
-          placeholder="Confirm password"
-          value={confirmationPassword}
-          onChange={(e) => handleConfirmationChange(e.target.value)}
-          className="w-full border p-2 pr-10 rounded"
-        />
-
-        {/* Toggle */}
-        <button
-          type="button"
-          onClick={() => setShowConfirm(!showConfirm)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
-        >
-          {showConfirm ? <Eye /> : <EyeOff />}
-        </button>
-      </div>
-
-      {fieldErrors.confirmationPassword && (
-        <p className="text-red-500 text-sm">
-          {fieldErrors.confirmationPassword}
-        </p>
-      )}
+      <input
+        type="password"
+        placeholder="Confirm password"
+        value={confirmationPassword}
+        onChange={e => handleConfirmationChange(e.target.value)}
+        className="w-full border p-2 rounded"
+      />
+      {fieldErrors.confirmationPassword && <p className="text-red-500 text-sm">{fieldErrors.confirmationPassword}</p>}
 
       {/* Role */}
       <div className="flex items-center space-x-6 mt-2">
         <label className="flex items-center space-x-2">
-          <input
-            type="radio"
-            name="role"
-            value="tenant"
-            checked={role === "tenant"}
-            onChange={() => setRole("tenant")}
-          />{" "}
-          Tenant
+          <input type="radio" name="role" value="tenant" checked={role === "tenant"} onChange={() => setRole("tenant")} /> Tenant
         </label>
         <label className="flex items-center space-x-2">
-          <input
-            type="radio"
-            name="role"
-            value="landlord"
-            checked={role === "landlord"}
-            onChange={() => setRole("landlord")}
-          />{" "}
-          Landlord
+          <input type="radio" name="role" value="landlord" checked={role === "landlord"} onChange={() => setRole("landlord")} /> Landlord
         </label>
       </div>
 
@@ -358,26 +255,17 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
         <input
           type="file"
           accept="image/*"
-          onChange={(e) => handleAvatarChange(e.target.files?.[0] || null)}
+          onChange={e => handleAvatarChange(e.target.files?.[0] || null)}
         />
-        {fieldErrors.avt && (
-          <p className="text-red-500 text-sm">{fieldErrors.avt}</p>
-        )}
+        {fieldErrors.avt && <p className="text-red-500 text-sm">{fieldErrors.avt}</p>}
         {avt && (
           <div className="relative w-24 h-24 mt-2">
-            <Image
-              src={URL.createObjectURL(avt)}
-              alt="Preview"
-              fill
-              className="object-cover rounded-full"
-            />
+            <Image src={URL.createObjectURL(avt)} alt="Preview" fill className="object-cover rounded-full" />
           </div>
         )}
       </div>
 
-      {fieldErrors.general && (
-        <p className="text-red-500 text-sm">{fieldErrors.general}</p>
-      )}
+      {fieldErrors.general && <p className="text-red-500 text-sm">{fieldErrors.general}</p>}
 
       {/* Submit */}
       <button
@@ -391,11 +279,7 @@ export default function RegisterForm({ setMode }: RegisterFormProps) {
       {/* Switch to login */}
       <p className="text-sm text-center mt-2">
         Already have an account?{" "}
-        <button
-          type="button"
-          onClick={() => setMode("login")}
-          className="text-blue-600 hover:underline"
-        >
+        <button type="button" onClick={() => setMode("login")} className="text-blue-600 hover:underline">
           Login
         </button>
       </p>

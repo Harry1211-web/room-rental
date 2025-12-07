@@ -170,69 +170,72 @@ export default function ReviewsPage() {
         </select>
       </div>
 
-      <DataTable<Review>
-        columns={[
-          {
-            key: "reviewer_id",
-            label: "Reviewer",
-            width: "w-[120px]",
-            render: r => r.reviewer_name || r.reviewer_email ? (
-              <HoverCard content={
-                <div className="text-gray-900 dark:text-gray-100">
-                  <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.reviewer_name ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {r.reviewer_email ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.reviewer_id}</p>
-                </div>
-              }>
-                <button
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                  onClick={() => r.reviewer_id && router.push(`pages/user/${r.reviewer_id}`)}
-                >
-                  {r.reviewer_name ?? r.reviewer_email ?? "No name"}
-                </button>
-              </HoverCard>
-            ) : "—",
-          },
-          {
-            key: "room_id",
-            label: "Room",
-            render: r => r.room_id ? (
-              <HoverCard content={
-                <div className="text-gray-900 dark:text-gray-100">
-                  <p><strong className="text-gray-900 dark:text-gray-100">Room:</strong> {r.room_name ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">Landlord:</strong> {r.landlord_name ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">Room ID:</strong> {r.room_id}</p>
-                </div>
-              }>
-                <button
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                  onClick={() => router.push(`pages/room/${r.room_id}`)}
-                >
-                  {r.room_name ?? "No name"} {r.landlord_name ? `(${r.landlord_name})` : ""}
-                </button>
-              </HoverCard>
-            ) : "—",
-          },
-          { key: "comment", label: "Comment" },
-          { key: "rating", label: "Rating", width: "w-[80px]", render: r => r.rating?.toString() ?? "—" },
-          { 
-            key: "created_at", 
-            label: "Date Sent", 
-            width: "w-[100px]", 
-            render: r => {
-              const date = new Date(r.created_at);
-              const day = String(date.getDate()).padStart(2, '0');
-              const month = String(date.getMonth() + 1).padStart(2, '0');
-              const year = date.getFullYear();
-              return `${day}/${month}/${year}`;
-            }
-          },
-        ]}
-        data={filteredReviews}
-        onDelete={row => deleteReview(row.id)}
-        rowsPerPage={10}
-        rowKey="id"
-      />
+      {/* Responsive table wrapper */}
+      <div className="overflow-x-auto">
+        <DataTable<Review>
+          columns={[
+            {
+              key: "reviewer_id",
+              label: "Reviewer",
+              width: "w-[120px]",
+              render: r => r.reviewer_name || r.reviewer_email ? (
+                <HoverCard content={
+                  <div className="text-gray-900 dark:text-gray-100">
+                    <p><strong>Name:</strong> {r.reviewer_name ?? "N/A"}</p>
+                    <p><strong>Email:</strong> {r.reviewer_email ?? "N/A"}</p>
+                    <p><strong>ID:</strong> {r.reviewer_id}</p>
+                  </div>
+                }>
+                  <button
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    onClick={() => r.reviewer_id && router.push(`pages/user/${r.reviewer_id}`)}
+                  >
+                    {r.reviewer_name ?? r.reviewer_email ?? "No name"}
+                  </button>
+                </HoverCard>
+              ) : "—",
+            },
+            {
+              key: "room_id",
+              label: "Room",
+              render: r => r.room_id ? (
+                <HoverCard content={
+                  <div className="text-gray-900 dark:text-gray-100">
+                    <p><strong>Room:</strong> {r.room_name ?? "N/A"}</p>
+                    <p><strong>Landlord:</strong> {r.landlord_name ?? "N/A"}</p>
+                    <p><strong>Room ID:</strong> {r.room_id}</p>
+                  </div>
+                }>
+                  <button
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    onClick={() => router.push(`pages/room/${r.room_id}`)}
+                  >
+                    {r.room_name ?? "No name"} {r.landlord_name ? `(${r.landlord_name})` : ""}
+                  </button>
+                </HoverCard>
+              ) : "—",
+            },
+            { key: "comment", label: "Comment" },
+            { key: "rating", label: "Rating", width: "w-[80px]", render: r => r.rating?.toString() ?? "—" },
+            { 
+              key: "created_at", 
+              label: "Date Sent", 
+              width: "w-[100px]", 
+              render: r => {
+                const date = new Date(r.created_at);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+              }
+            },
+          ]}
+          data={filteredReviews}
+          onDelete={row => deleteReview(row.id)}
+          rowsPerPage={10}
+          rowKey="id"
+        />
+      </div>
     </div>
   );
 }

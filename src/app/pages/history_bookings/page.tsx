@@ -40,21 +40,6 @@ export default function BookingHistory() {
   const [offset, setOffset] = useState(0);
   const LIMIT = 5;
   const route = useRouter();
-
-  // Truncate text to maxWords words
-  const truncateText = (text: string | undefined, maxWords: number = 6) => {
-    if (!text) return "No description.";
-    // Add .filter(word => word.length > 0) to handle extra spaces (if any)
-    const words = text.split(/\s+/).filter(word => word.length > 0); 
-
-    // Check console output
-    console.log(`Title: ${words.slice(0, 3).join(' ')}... | Word Count: ${words.length}`); 
-    
-    if (words.length <= maxWords) return text;
-
-    return words.slice(0, maxWords).join(" ") + "...";
-  };
-
   // Load bookings in pages of 5
   const fetchBookings = async (loadMore = false) => {
     if (!idUser) return;
@@ -156,9 +141,9 @@ export default function BookingHistory() {
 
             <div className="p-4 space-y-2 dark:text-gray-700 flex-1">
               <h2 className="text-xl font-semibold">{b.rooms?.title}</h2>
-              <p className="text-gray-700 italic"><strong>Description:</strong>
-                {truncateText(b.rooms?.description)} {/* Apply truncateText function */}
-              </p>
+              {b.rooms?.description && (
+                <p className="text-gray-700 italic">{b.rooms.description}</p>
+              )}
 
               <p><strong>Address:</strong> {b.rooms?.address || "Not available"}</p>
               <p><strong>City:</strong> {b.rooms?.city || "Not available"}</p>

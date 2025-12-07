@@ -30,17 +30,11 @@ export default function LoginForm({
     if (!password.trim()) newErrors.password = "Password is required.";
     if (Object.keys(newErrors).length > 0) return setFieldErrors(newErrors);
 
-    // Auto add @gmail.com if not exists
-    let finalEmail = email.trim();
-    if (finalEmail && !finalEmail.includes("@")) {
-      finalEmail = `${finalEmail}@gmail.com`;
-    }
-
     setLoading(true);
     try {
-      // Login Supabase
+      // 🔹 1. Đăng nhập Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: finalEmail,
+        email,
         password,
       });
 
@@ -55,7 +49,7 @@ export default function LoginForm({
 
       const user = data.user;
 
-      // Get role from users table
+      // 🔹 2. Lấy role từ bảng public.Users
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("role, avatar_url")
@@ -73,18 +67,18 @@ export default function LoginForm({
         return;
       }
       console.log(userData.role);
-      // Save session to localStorage
+      // 🔹 3. Lưu session đăng nhập
       localStorage.setItem("isLogin", "true");
 
-      // Save avatar to localStorage
+      // 🔹 Lưu avatar vào localStorage (nếu muốn)
       localStorage.setItem("avatar_url", userData.avatar_url ?? "");
 
-      // Update state outside (if needed)
+      // 🔹 4. Cập nhật state bên ngoài (nếu cần)
       setUserFromServer(user.id, userData.role);
 
       toast.success("Login successful");
 
-      // Redirect to home page
+      // 🔹 5. Chuyển hướng về trang chủ
       router.push("/");
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -97,7 +91,7 @@ export default function LoginForm({
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <input
-        type="text"
+        type="email"
         placeholder="Email"
         className="w-full border p-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         value={email}
@@ -116,7 +110,7 @@ export default function LoginForm({
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {/* Toggle password visibility */}
+        {/* Toggle */}
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}

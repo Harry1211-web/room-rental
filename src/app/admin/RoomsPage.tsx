@@ -236,9 +236,11 @@ const deleteRoom = async (id: string) => {
 
   const filteredRooms = rooms
     .filter((r) => {
+      const roomTitle = r.title ?? ""; 
+      const landlordName = r.landlordName ?? "";
       const matchesSearch =
-        r.title.toLowerCase().includes(search.toLowerCase()) ||
-        r.landlordName.toLowerCase().includes(search.toLowerCase());
+        (roomTitle?.toLowerCase() ?? "").includes(search.toLowerCase()) ||
+        (landlordName?.toLowerCase() ?? "").includes(search.toLowerCase());
       const matchesStatus = filterStatus === "all" || r.status === filterStatus;
       const matchesTag = filterTag === "all" || r.tags.some(tag => getRoomTagKey(tag) === filterTag);
       return matchesSearch && matchesStatus && matchesTag;
@@ -255,7 +257,7 @@ const deleteRoom = async (id: string) => {
       {/* ADD TAG MODAL */}
       {showAddTagModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md sm:max-w-lg w-full mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Add New Tag</h3>
               <button onClick={() => setShowAddTagModal(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
@@ -387,12 +389,12 @@ const deleteRoom = async (id: string) => {
           <input
             type="text"
             placeholder="🔍 Search by room title or landlord"
-            className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded w-128"
+            className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded w-full sm:w-64 md:w-128"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           <select
-            className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded"
+            className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded w-full sm:w-40"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >
@@ -401,7 +403,7 @@ const deleteRoom = async (id: string) => {
             <option value="booked">Booked</option>
           </select>
           <select
-            className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded"
+            className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded w-full sm:w-48"
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
           >
@@ -413,7 +415,7 @@ const deleteRoom = async (id: string) => {
             ))}
           </select>
           <select
-            className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded"
+            className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded w-full sm:w-48"
             value={bookingSort || ""}
             onChange={(e) =>
               setBookingSort(e.target.value ? (e.target.value as "asc" | "desc") : null)
@@ -424,110 +426,111 @@ const deleteRoom = async (id: string) => {
             <option value="asc">Booking low → high</option>
           </select>
         </div>
-
-        <DataTable<Room>
-          columns={[
-            { 
-              key: "id", 
-              label: "ID",
-              width: "w-[150px]",
-              render: (row) => (
-                <HoverCard content={
-                  <div className="text-gray-900 dark:text-gray-100">
-                    <p><strong className="text-gray-900 dark:text-gray-100">Full ID:</strong> {row.id}</p>
-                  </div>
-                }>
-                  <span className="cursor-help" title={row.id}>
-                    {row.id.substring(0, 12)}...
-                  </span>
-                </HoverCard>
-              )
-            },
-            {
-              key: "title",
-              label: "Room title",
-              width: "min-w-[350px]",
-              render: (row) => (
-                <div className="text-left">
-                  <HoverCard
-                    content={
-                      <div className="space-y-1 text-sm">
-                        <p><strong>Title:</strong> {row.title}</p>
-                        <p><strong>Status:</strong> {row.status}</p>
-                        <p><strong>Tags:</strong> {row.tags.map(t => `${t.value} (${t.amount})`).join(", ") || "—"}</p>
-                        <p><strong>Total bookings:</strong> {row.total_confirm_booking}</p>
-                      </div>
-                    }
-                  >
-                    <button
-                      className="text-blue-600 hover:underline block w-full text-left"
-                      onClick={() => router.push(`/pages/room/${row.id}`)}
-                    >
-                      {row.title}
-                    </button>
-                  </HoverCard>
-                </div>
-              ),
-            },
-            {
-              key: "landlordName",
-              label: "Landlord",
-              width: "w-[150px]",
-              render: (row) => (
-                <div className="text-left">
-                  <HoverCard
-                    content={
-                      <div className="space-y-1 text-gray-900 dark:text-gray-100">
-                        <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {row.landlordName}</p>
-                        {row.landlordEmail && <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {row.landlordEmail}</p>}
-                      </div>
-                    }
-                  >
-                    <button
-                      className="text-blue-600 dark:text-blue-400 hover:underline block w-full text-left"
-                      onClick={() => router.push(`/pages/user/${row.landlord_id}`)}
-                    >
-                      {row.landlordName}
-                    </button>
-                  </HoverCard>
-                </div>
-              ),
-            },
-            { key: "status", label: "Status", width: "w-[100px]" },
-            {
-              key: "tags", 
-              label: "Tags",
-              width: "w-[180px]",
-              render: (row) => {
-                if (!row.tags || row.tags.length === 0) {
-                  return "—";
-                }
-                const firstTag = `${row.tags[0].value} (${row.tags[0].amount})`;
-                const allTagsText = row.tags.map(t => `${t.value} (${t.amount})`).join(", ");
-                
-                if (row.tags.length === 1) {
-                  return firstTag;
-                }
-                
-                return (
+        <div className="overflow-x-auto">
+          <DataTable<Room>
+            columns={[
+              { 
+                key: "id", 
+                label: "ID",
+                width: "w-[150px]",
+                render: (row) => (
                   <HoverCard content={
                     <div className="text-gray-900 dark:text-gray-100">
-                      <p><strong className="text-gray-900 dark:text-gray-100">All Tags:</strong></p>
-                      <p className="text-sm">{allTagsText}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">Full ID:</strong> {row.id}</p>
                     </div>
                   }>
-                    <span className="cursor-help" title={allTagsText}>
-                      {firstTag}, ...
+                    <span className="cursor-help" title={row.id}>
+                      {row.id.substring(0, 12)}...
                     </span>
                   </HoverCard>
-                );
-              }
-            },
-            { key: "total_confirm_booking", label: "Total booking", width: "w-[130px]" },
-          ]}
-          data={filteredRooms}
-          onDelete={(r) => deleteRoom(r.id)}
-        />
+                )
+              },
+              {
+                key: "title",
+                label: "Room title",
+                width: "min-w-[200px] sm:min-w-[350px]",
+                render: (row) => (
+                  <div className="text-left">
+                    <HoverCard
+                      content={
+                        <div className="space-y-1 text-sm">
+                          <p><strong>Title:</strong> {row.title}</p>
+                          <p><strong>Status:</strong> {row.status}</p>
+                          <p><strong>Tags:</strong> {row.tags.map(t => `${t.value} (${t.amount})`).join(", ") || "—"}</p>
+                          <p><strong>Total bookings:</strong> {row.total_confirm_booking}</p>
+                        </div>
+                      }
+                    >
+                      <button
+                        className="text-blue-600 hover:underline block w-full text-left"
+                        onClick={() => router.push(`/pages/room/${row.id}`)}
+                      >
+                        {row.title}
+                      </button>
+                    </HoverCard>
+                  </div>
+                ),
+              },
+              {
+                key: "landlordName",
+                label: "Landlord",
+                width: "w-[150px]",
+                render: (row) => (
+                  <div className="text-left">
+                    <HoverCard
+                      content={
+                        <div className="space-y-1 text-gray-900 dark:text-gray-100">
+                          <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {row.landlordName}</p>
+                          {row.landlordEmail && <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {row.landlordEmail}</p>}
+                        </div>
+                      }
+                    >
+                      <button
+                        className="text-blue-600 dark:text-blue-400 hover:underline block w-full text-left"
+                        onClick={() => router.push(`/pages/user/${row.landlord_id}`)}
+                      >
+                        {row.landlordName}
+                      </button>
+                    </HoverCard>
+                  </div>
+                ),
+              },
+              { key: "status", label: "Status", width: "w-[100px]" },
+              {
+                key: "tags", 
+                label: "Tags",
+                width: "w-[180px]",
+                render: (row) => {
+                  if (!row.tags || row.tags.length === 0) {
+                    return "—";
+                  }
+                  const firstTag = `${row.tags[0].value} (${row.tags[0].amount})`;
+                  const allTagsText = row.tags.map(t => `${t.value} (${t.amount})`).join(", ");
+                  
+                  if (row.tags.length === 1) {
+                    return firstTag;
+                  }
+                  
+                  return (
+                    <HoverCard content={
+                      <div className="text-gray-900 dark:text-gray-100">
+                        <p><strong className="text-gray-900 dark:text-gray-100">All Tags:</strong></p>
+                        <p className="text-sm">{allTagsText}</p>
+                      </div>
+                    }>
+                      <span className="cursor-help" title={allTagsText}>
+                        {firstTag}, ...
+                      </span>
+                    </HoverCard>
+                  );
+                }
+              },
+              { key: "total_confirm_booking", label: "Total booking", width: "w-[130px]" },
+            ]}
+            data={filteredRooms}
+            onDelete={(r) => deleteRoom(r.id)}
+          />
+        </div>
       </div>
 
       {/* TAG MANAGEMENT */}
@@ -561,16 +564,16 @@ function TagManager({
   const [searchTag, setSearchTag] = useState("");
 
   const filteredTags = tags.filter((t) =>
-    t.value.toLowerCase().includes(searchTag.toLowerCase()) ||
-    t.id.toLowerCase().includes(searchTag.toLowerCase()) ||
-    t.value_type.toLowerCase().includes(searchTag.toLowerCase())
+    (t.value?.toLowerCase() ?? "").includes(searchTag.toLowerCase()) ||
+    (t.id?.toLowerCase() ?? "").includes(searchTag.toLowerCase()) ||
+    (t.value_type?.toLowerCase() ?? "").includes(searchTag.toLowerCase())
   );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center justify-between">
         <input
-          className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded w-140 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+          className="border dark:border-gray-600 dark:bg-gray-800 p-2 rounded w-full sm:w-72 md:w-140"
           placeholder="🔍 Search tag by value, type, or id"
           value={searchTag}
           onChange={(e) => setSearchTag(e.target.value)}

@@ -154,124 +154,126 @@ export default function ReportsPage() {
         />
       </div>
 
-      <DataTable<Report>
-        columns={[
-          {
-            key: "reporter_id",
-            label: "Reporter",
-            width: "w-[120px]",
-            render: r => r.reporter_id ? (
-              <HoverCard content={
-                <div className="text-gray-900 dark:text-gray-100">
-                  <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {usersMap.get(r.reporter_id)?.name ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {usersMap.get(r.reporter_id)?.email ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.reporter_id}</p>
-                </div>
-              }>
-                <button
-                  className="text-blue-600 dark:text-blue-400 hover:underline text-left"
-                  onClick={() => router.push(`pages/user/${r.reporter_id}`)}
-                >
-                  {usersMap.get(r.reporter_id)?.name ?? r.reporter_id}
-                </button>
-              </HoverCard>
-            ) : "—",
-          },
-          {
-            key: "targeted_user_id",
-            label: "Targeted User",
-            width: "w-[120px]",
-            render: r => r.targeted_user_id ? (
-              <HoverCard content={
-                <div className="text-gray-900 dark:text-gray-100">
-                  <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {usersMap.get(r.targeted_user_id)?.name ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {usersMap.get(r.targeted_user_id)?.email ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.targeted_user_id}</p>
-                </div>
-              }>
-                <button
-                  className="text-blue-600 dark:text-blue-400 hover:underline text-left"
-                  onClick={() => router.push(`pages/user/${r.targeted_user_id}`)}
-                >
-                  {usersMap.get(r.targeted_user_id)?.name ?? r.targeted_user_id}
-                </button>
-              </HoverCard>
-            ) : "—",
-          },
-          {
-            key: "room_id",
-            label: "Room",
-            width: "min-w-[220px]",
-            render: r => r.room_id ? (
-              <HoverCard content={
-                <div className="text-gray-900 dark:text-gray-100">
-                  <p><strong className="text-gray-900 dark:text-gray-100">Room:</strong> {roomsMap.get(r.room_id)?.name ?? "N/A"}</p>
-                  <p><strong className="text-gray-900 dark:text-gray-100">Room ID:</strong> {r.room_id}</p>
-                </div>
-              }>
-                <button
-                  className="text-blue-600 dark:text-blue-400 hover:underline text-left"
-                  onClick={() => router.push(`pages/room/${r.room_id}`)}
-                >
-                  {roomsMap.get(r.room_id)?.name ?? r.room_id}
-                </button>
-              </HoverCard>
-            ) : "—",
-          },
-          { key: "reason", label: "Reason", width: "w-[18 0px]" },
-          {
-            key: "status",
-            label: "Status",
-            width: "w-[150px]",
-            render: (r: Report) => {
-              const value = r.status;
-              switch (value) {
-                case "reviewed":
-                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium text-sm">✅ Reviewed</span>;
-                case "rejected":
-                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 font-medium text-sm">❌ Rejected</span>;
-                default:
-                  return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 font-medium text-sm">🟡 Pending</span>;
-              }
-            },
-          },
-          { key: "created_at", label: "Date Sent", width: "w-[120px]", render: r => formatDate(r.created_at) },
-          {
-            key: "proof",
-            label: "Proof Picture",
-            width: "w-[120px]",
-            render: r => r.proof ? (
-              <button onClick={() => setPreviewImage(r.proof ?? null)} className="p-1 border dark:border-gray-700 rounded-lg hover:shadow-md transition">
-                <img src={r.proof} alt="Proof" className="w-20 h-20 object-cover rounded" />
-              </button>
-            ) : "—",
-          },
-          {
-            key: undefined,
-            label: "Actions",
-            width: "w-[200px]",
-            render: r => (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setEditingReport(r)}
-                  className="px-3 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 hover:shadow-lg transition text-sm"
-                >
-                  Edit Status
-                </button>
-                <button
-                  onClick={() => setReportToDelete(r)}
-                  className="px-3 py-1 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 hover:shadow-lg transition text-sm"
-                >
-                  Delete
-                </button>
-              </div>
-            ),
-          },
-        ]}
-        data={filteredReports}
-        rowsPerPage={10}
-        rowKey="id"
-      />
+      <div className="overflow-x-auto min-w-full">
+          <DataTable<Report>
+            columns={[
+              {
+                key: "reporter_id",
+                label: "Reporter",
+                width: "w-[120px]",
+                render: r => r.reporter_id ? (
+                  <HoverCard content={
+                    <div className="text-gray-900 dark:text-gray-100 max-w-xs sm:max-w-sm">
+                      <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {usersMap.get(r.reporter_id)?.name ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {usersMap.get(r.reporter_id)?.email ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.reporter_id}</p>
+                    </div>
+                  }>
+                    <button
+                      className="text-blue-600 dark:text-blue-400 hover:underline text-left truncate max-w-[120px] sm:max-w-[200px]"
+                      onClick={() => router.push(`pages/user/${r.reporter_id}`)}
+                    >
+                      {usersMap.get(r.reporter_id)?.name ?? r.reporter_id}
+                    </button>
+                  </HoverCard>
+                ) : "—",
+              },
+              {
+                key: "targeted_user_id",
+                label: "Targeted User",
+                width: "w-[120px]",
+                render: r => r.targeted_user_id ? (
+                  <HoverCard content={
+                    <div className="text-gray-900 dark:text-gray-100">
+                      <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {usersMap.get(r.targeted_user_id)?.name ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {usersMap.get(r.targeted_user_id)?.email ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.targeted_user_id}</p>
+                    </div>
+                  }>
+                    <button
+                      className="text-blue-600 dark:text-blue-400 hover:underline text-left"
+                      onClick={() => router.push(`pages/user/${r.targeted_user_id}`)}
+                    >
+                      {usersMap.get(r.targeted_user_id)?.name ?? r.targeted_user_id}
+                    </button>
+                  </HoverCard>
+                ) : "—",
+              },
+              {
+                key: "room_id",
+                label: "Room",
+                width: "min-w-[220px]",
+                render: r => r.room_id ? (
+                  <HoverCard content={
+                    <div className="text-gray-900 dark:text-gray-100">
+                      <p><strong className="text-gray-900 dark:text-gray-100">Room:</strong> {roomsMap.get(r.room_id)?.name ?? "N/A"}</p>
+                      <p><strong className="text-gray-900 dark:text-gray-100">Room ID:</strong> {r.room_id}</p>
+                    </div>
+                  }>
+                    <button
+                      className="text-blue-600 dark:text-blue-400 hover:underline text-left"
+                      onClick={() => router.push(`pages/room/${r.room_id}`)}
+                    >
+                      {roomsMap.get(r.room_id)?.name ?? r.room_id}
+                    </button>
+                  </HoverCard>
+                ) : "—",
+              },
+              { key: "reason", label: "Reason", width: "w-[18 0px]" },
+              {
+                key: "status",
+                label: "Status",
+                width: "w-[150px]",
+                render: (r: Report) => {
+                  const value = r.status;
+                  switch (value) {
+                    case "reviewed":
+                      return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium text-sm">✅ Reviewed</span>;
+                    case "rejected":
+                      return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 font-medium text-sm">❌ Rejected</span>;
+                    default:
+                      return <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 font-medium text-sm">🟡 Pending</span>;
+                  }
+                },
+              },
+              { key: "created_at", label: "Date Sent", width: "w-[120px]", render: r => formatDate(r.created_at) },
+              {
+                key: "proof",
+                label: "Proof Picture",
+                width: "w-[120px]",
+                render: r => r.proof ? (
+                  <button onClick={() => setPreviewImage(r.proof ?? null)} className="p-1 border dark:border-gray-700 rounded-lg hover:shadow-md transition">
+                    <img src={r.proof} alt="Proof" className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded" />
+                  </button>
+                ) : "—",
+              },
+              {
+                key: undefined,
+                label: "Actions",
+                width: "w-[200px]",
+                render: r => (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      onClick={() => setEditingReport(r)}
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 hover:shadow-lg transition text-sm"
+                    >
+                      Edit Status
+                    </button>
+                    <button
+                      onClick={() => setReportToDelete(r)}
+                      className="px-3 py-1 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 hover:shadow-lg transition text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+            data={filteredReports}
+            rowsPerPage={10}
+            rowKey="id"
+          />
+      </div>
 
       {editingReport && (
         <EditablePopup
