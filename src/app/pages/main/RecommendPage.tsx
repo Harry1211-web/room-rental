@@ -26,32 +26,33 @@ export default function RecommendPage() {
 
   // Fetch recommended rooms on mount
   useEffect(() => {
-    if (!loading && role !== "admin") {
-      const fetchRooms = async () => {
-        try {
-          setIsLoading(true);
-
-          const [booked, rated, hot] = await Promise.all([
-            supabase.rpc("rpc_top_booked_rooms"),
-            supabase.rpc("rpc_top_rated_rooms"),
-            supabase.rpc("rpc_hot_rooms_this_month")
-          ]);
-
-          setTopBooked((booked.data as Room[]) ?? []);
-          setTopRated((rated.data as Room[]) ?? []);
-          setHotThisMonth((hot.data as Room[]) ?? []);
-          setShowRooms(true);
-        } catch (err) {
-          console.error("Error fetching rooms:", err);
-        } finally {
-          setIsLoading(false);
-          setLoading(false);
-        }
-      };
-
-      fetchRooms();
+    if (loading || role === "admin") {
+      return; 
     }
-  }, [loading, role, setLoading]);
+
+    const fetchRooms = async () => {
+      try {
+        setIsLoading(true);
+
+        const [booked, rated, hot] = await Promise.all([
+          supabase.rpc("rpc_top_booked_rooms"),
+          supabase.rpc("rpc_top_rated_rooms"),
+          supabase.rpc("rpc_hot_rooms_this_month")
+        ]);
+
+        setTopBooked((booked.data as Room[]) ?? []);
+        setTopRated((rated.data as Room[]) ?? []);
+        setHotThisMonth((hot.data as Room[]) ?? []);
+        setShowRooms(true);
+      } catch (err) {
+        console.error("Error fetching rooms:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRooms();
+  }, [loading, role, ]);
 
   // Show loader until both data and image are loaded
   const shouldShowLoader = isLoading;

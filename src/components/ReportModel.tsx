@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/app/context/Usercontext";
+import { toast } from "sonner";
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export default function ReportModal({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 3 * 1024 * 1024) {
-        alert("⚠️ Image too large. Maximum size is 3MB.");
+        toast.warning("⚠️ Image too large. Maximum size is 3MB.");
         return;
       }
       setProofFile(file);
@@ -49,11 +50,11 @@ export default function ReportModal({
 
   const handleSubmit = async () => {
     if (!reason.trim()) {
-      alert("⚠️ Please provide a reason for the report.");
+      toast.warning("⚠️ Please provide a reason for the report.");
       return;
     }
     if (reason.trim().length < 10) {
-      alert("⚠️ The reason is too short. Please enter at least 10 characters.");
+      toast.warning("⚠️ The reason is too short. Please enter at least 10 characters.");
       return;
     }
 
@@ -76,7 +77,7 @@ export default function ReportModal({
 
     if (error || !data) {
       console.error("❌ Error creating report:", error);
-      alert("❌ Failed to submit the report!");
+      toast.error("❌ Failed to submit the report!");
       setLoading(false);
       return;
     }
@@ -106,7 +107,7 @@ export default function ReportModal({
       }
     }
 
-    alert("✅ Your report has been submitted. Thank you!");
+    toast.success("✅ Your report has been submitted. Thank you!");
     setReason("");
     setProofFile(null);
     setLoading(false);
