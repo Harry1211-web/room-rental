@@ -44,7 +44,7 @@ export function NavbarBasicSearch() {
   const handleSearch = useCallback(async (query: string) => {
     const searchKeyword = query.trim();
 
-    if (searchKeyword.length < 1) {
+    if (searchKeyword.length < 2) {
       setSuggestions([]);
       return;
     }

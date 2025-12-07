@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { useUser } from "./context/Usercontext";
 import { useAuthSync } from "./useAuthSync";
 import AdminPage from "./pages/main/AdminPage";
-import RecommendPage from "./pages/main/RecommendPage";
+import RecomendPage from "./pages/main/RecomendPage";
 import { Footer } from "../components/Footer";
 
 export default function Home() {
   const { role, loading, setLoading } = useUser();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false); 
-  useEffect (() => {setLoading(false)}, [])
+  useEffect (() => {setLoading(false)})
   useAuthSync(60);
 
   const preloadImages = async () => {
@@ -57,7 +57,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-1 pt-24"> {/*Added flex layout */}
-        {role === "admin" ? <AdminPage /> : <RecommendPage />}
+        {role === "admin" ? <AdminPage /> : <RecomendPage />}
       </main>
       {role !== "admin" && <Footer />} {/* Add footer component only for non-admin users */}
     </div>

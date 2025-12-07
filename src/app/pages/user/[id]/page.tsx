@@ -1,22 +1,13 @@
 "use client";
 
-import imageCompression from "browser-image-compression";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
-import { toast } from "sonner";
 import { format } from "date-fns";
 import { useUser } from "@/app/context/Usercontext";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 
-//==================== TYPES ====================
+// ==================== TYPES ====================
 interface UserProfile {
   id: string;
   name: string;
@@ -48,50 +39,12 @@ interface Room {
   image_url?: string | null;
 }
 
-//==================== MODAL COMPONENT ====================
-
-export function ConfirmDeleteModal({ open, onConfirm, onCancel }) {
-  return (
-    <Dialog open={open} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Are you sure?</DialogTitle>
-        </DialogHeader>
-
-        <p className="text-gray-700 dark:text-gray-300">
-          This action cannot be undone. All your data including rooms, reviews, and images will be permanently deleted.
-        </p>
-
-        <DialogFooter className="mt-4">
-          <button 
-            type="button" 
-            onClick={onCancel} 
-            className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            Cancel
-          </button>
-          <button 
-            type="button" 
-            onClick={onConfirm} 
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-          >
-            Delete Profile
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-//==================== MAIN COMPONENT ====================
+// ==================== COMPONENT ====================
 export default function UserPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { setLoading, logout, updateAvatar } = useUser();
+  const { setLoading, logout } = useUser();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  
-  //Custom file input ref
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [reviews, setReviews] = useState<ReviewWithRoom[]>([]);
@@ -106,16 +59,12 @@ export default function UserPage() {
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
-  const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
-  const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
-
-  const [disabledButton, setDisabledButton] = useState<boolean>(false);
 
   useEffect(() => {
     setLoading(false);
-  }, [setLoading]);
+  });
 
-  //Fetch current logged-in user to check ownership
+  // ==================== FETCH CURRENT USER ====================
   useEffect(() => {
     const fetchCurrentUser = async () => {
       const { data: sessionData } = await supabase.auth.getUser();
@@ -131,7 +80,7 @@ export default function UserPage() {
     fetchCurrentUser();
   }, []);
 
-  //Fetch target user data, reviews, and rooms
+  // ==================== FETCH USER DATA ====================
   useEffect(() => {
     if (!id) return;
 
@@ -155,7 +104,7 @@ export default function UserPage() {
             comment,
             created_at,
             rooms(id, title, city, price)
-            `
+          `
           )
           .eq("reviewer_id", id)
           .order("created_at", { ascending: false });
@@ -163,21 +112,14 @@ export default function UserPage() {
 
         const { data: roomsData, error: roomsError } = await supabase
           .from("rooms")
-          .select("*, room_images(img_url)")
+          .select("*")
           .eq("landlord_id", id)
           .order("created_at", { ascending: false });
         if (roomsError) throw roomsError;
 
-        //Extract the first image URL for room cover
-        const roomsList: Room[] = roomsData?.map(r => ({
-            ...r,
-            image_url: r.room_images?.[0]?.img_url || null
-        })) || [];
-
-
         setUser(userData);
         setReviews((reviewsData as unknown as ReviewWithRoom[]) || []);
-        setRooms(roomsList);
+        setRooms((roomsData as unknown as Room[]) || []);
         setEditName(userData?.name || "");
         setEditEmail(userData?.email || "");
         setEditPhone(userData?.phone_number || "");
@@ -191,7 +133,7 @@ export default function UserPage() {
     fetchUser();
   }, [id]);
 
-  //==================== FILTER & SORT LOGIC ====================
+  // ==================== FILTER & SORT ====================
   const filteredReviews = reviews.filter((r) =>
     filterRating ? r.rating === filterRating : true
   );
@@ -220,79 +162,24 @@ export default function UserPage() {
 
   const isOwner = currentUser?.id === user.id;
 
-  //==================== HANDLE PROFILE UPDATE ====================
+  // ==================== HANDLE UPDATE ====================
   const handleSaveProfile = async () => {
-    setDisabledButton(true)
     try {
-      let avatarUrl = user?.avatar_url || null;
-      let shouldDeleteOldAvatar = false;
-
-      //1. Check for Delete action: No new file, but user had an old avatar, AND preview is set to default image.
-      if (!newAvatarFile && user.avatar_url && previewAvatar === "/avatar_default.jpg") {
-          shouldDeleteOldAvatar = true;
-          avatarUrl = null; 
-      }
-
-      //2. Handle New File Upload
-      if (newAvatarFile) {
-        const formData = new FormData();
-        formData.append("userId", user.id);
-        formData.append("file", newAvatarFile);
-
-        const res = await fetch("/api/avatar", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        avatarUrl = data.avatarUrl;
-        shouldDeleteOldAvatar = false; //Uploading new file overrides delete command
-      }
-      
-      //3. Execute Storage Deletion
-      if (shouldDeleteOldAvatar) {
-          //Call API DELETE to remove the physical file from Supabase Storage
-          await fetch("/api/avatar", {
-              method: "DELETE",
-              body: (() => {
-                  const formData = new FormData();
-                  formData.append("userId", user.id);
-                  return formData;
-              })(),
-          });
-      }
-
-      //4. Update Profile in Database
       const { data, error } = await supabase
         .from("users")
-        .update({ name: editName, email: editEmail, phone_number: editPhone, avatar_url: avatarUrl })
+        .update({ name: editName, email: editEmail, phone_number: editPhone })
         .eq("id", user.id)
         .select()
         .single();
       if (error) throw error;
-      
-      setUser({
-        ...data,
-        avatar_url: data.avatar_url ? data.avatar_url + `?t=${Date.now()}` : null
-      });
-      updateAvatar(data.avatar_url ? data.avatar_url + `?t=${Date.now()}` : null); 
+      setUser(data);
       setEditing(false);
-      setNewAvatarFile(null);
-      setPreviewAvatar(null); //Reset preview
-      
-      //Reset input file ref sau khi lưu
-      if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-      }
-      toast.success("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
-      toast.error("Failed to update profile.");
     }
-    setDisabledButton(false)
   };
 
-  //==================== HANDLE PROFILE DELETION ====================
+  //================Delete Profile=======================
   const handleDeleteProfile = () => {
     if (!user) return;
     setOpenConfirmDelete(true);
@@ -303,19 +190,18 @@ export default function UserPage() {
     if (!user) return;
 
     try {
-      setLoading(true);
+      setLoading(true); // bật loading global từ UserContext
 
-      //1. Get rooms listed by user
+      // 1️⃣ Check if user is landlord (has rooms)
       const { data: roomsData, error: roomsError } = await supabase
         .from("rooms")
         .select("id")
         .eq("landlord_id", user.id);
       if (roomsError) throw roomsError;
 
-      //2. Delete related data if user is a landlord
+      // 2️⃣ Delete room images & verifications
       if (roomsData?.length) {
         for (const room of roomsData) {
-          //2a. Delete room images (Storage & DB)
           await fetch("/api/storage/room_images", {
             method: "DELETE",
             body: (() => {
@@ -326,28 +212,30 @@ export default function UserPage() {
             })(),
           });
 
-          //2b. Delete room verifications (Storage & DB)
-          await fetch("/api/storage/verification", {
-            method: "DELETE",
-            body: (() => {
-                const formData = new FormData();
-                formData.append("action", "delete-all");
-                formData.append("idRoom", room.id);
-                return formData;
-            })(),
-          });
-          
-          //Xóa records verifications trong DB
-          await supabase
+          const { data: verifiData } = await supabase
             .from("verifications")
-            .delete()
+            .select("id")
             .eq("room_id", room.id);
+
+          if (verifiData?.length) {
+            for (const veri of verifiData) {
+              await fetch("/api/storage/verification", {
+                method: "DELETE",
+                body: (() => {
+                  const formData = new FormData();
+                  formData.append("action", "delete-all");
+                  formData.append("idRoom", veri.id);
+                  return formData;
+                })(),
+              });
+            }
+          }
         }
       }
-      
-      //3. Delete avatar (Storage)
+
+      // 3️⃣ Delete avatar
       if (user.avatar_url) {
-        await fetch("/api/avatar", {
+        await fetch("/api/storage/avatar", {
           method: "DELETE",
           body: (() => {
             const formData = new FormData();
@@ -357,20 +245,18 @@ export default function UserPage() {
         });
       }
 
-      //4. Delete user record
+      // 4️⃣ Delete user
       const { error: deleteUserError } = await supabase
         .from("users")
         .delete()
         .eq("id", user.id);
       if (deleteUserError) throw deleteUserError;
 
-      //5. Sign out & redirect
-      toast.success("User and all related data deleted.");
-      logout();
-      router.push("/");
+      alert("User and all related data deleted.");
+      logout(); // từ UserContext
     } catch (err) {
       console.error("Delete user error:", err);
-      toast.error("Failed to delete user. Check console for details.");
+      alert("Failed to delete user.");
     } finally {
       setLoading(false);
     }
@@ -381,124 +267,49 @@ export default function UserPage() {
       {/* ==================== USER INFO ==================== */}
       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-12">
         <Image
-          src={previewAvatar || user.avatar_url || "/avatar_default.jpg"}
-          unoptimized
+          src={user.avatar_url || "/avatar_default.jpg"}
           width={140}
           height={140}
           alt={user.name}
-          className="rounded-full object-cover shadow-lg w-24 h-24 sm:w-36 sm:h-36"
+          className="rounded-full object-cover shadow-lg"
         />
         <div className="text-center sm:text-left w-full max-w-md">
           {isOwner && editing ? (
-            <div className="space-y-3">
-              <label className="block text-sm font-medium">Name:</label>
+            <div className="space-y-2">
+              <label htmlFor="">Name: </label>
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="border rounded px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="border rounded px-3 py-1 w-full"
                 placeholder="Name"
               />
-              <label className="block text-sm font-medium">Email:</label>
+              <label htmlFor="">Email: </label>
               <input
-                type="email"
+                type="text"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
-                className="border rounded px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="border rounded px-3 py-2 w-full"
                 placeholder="Email"
               />
-              <label className="block text-sm font-medium">Phone number:</label>
+              <label htmlFor="">Phone number: </label>
               <input
                 type="text"
                 value={editPhone}
                 onChange={(e) => setEditPhone(e.target.value)}
-                className="border rounded px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="border rounded px-3 py-2 w-full"
                 placeholder="Phone Number"
               />
-              
-              {/* CUSTOM INPUT FILE */}
-              <div>
-                <label className="block mb-1 text-sm font-medium">New Avatar (Optional):</label>
-                
-                {/* Ẩn input file gốc và gán ref */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-
-                      //Compress image before setting
-                      const compressed = await imageCompression(file, {
-                        maxSizeMB: 0.15,
-                        maxWidthOrHeight: 256,
-                        useWebWorker: true,
-                      });
-
-                      setNewAvatarFile(compressed);
-                      setPreviewAvatar(URL.createObjectURL(compressed));
-                    } else {
-                      setNewAvatarFile(null);
-                      setPreviewAvatar(null);
-                    }
-                  }}
-                />
-
-                {/* Button tùy chỉnh để kích hoạt input file */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full bg-gray-100 dark:bg-gray-700 border border-dashed border-gray-400 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                >
-                  {/* Hiển thị tên file nếu đã chọn, hoặc text mặc định */}
-                  {newAvatarFile ? `Selected: ${newAvatarFile.name}` : "Click to choose a new image"}
-                </button>
-              </div>
-              
-              {/* NÚT XÓA AVATAR HIỆN TẠI */}
-              {(user.avatar_url || newAvatarFile) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewAvatarFile(null); 
-                    setPreviewAvatar(user.avatar_url || "/avatar_default.jpg"); 
-                    updateAvatar(null);
-                    //Reset input file ref
-                    if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                    }
-                  }}
-                  className="text-red-500 hover:text-red-600 text-sm underline -mt-2 block"
-                >
-                  Clear current Avatar
-                </button>
-              )}
-              
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3">
                 <button
                   onClick={handleSaveProfile}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
-                  disabled={disabledButton}
+                  className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 transition"
                 >
-                  Save Changes
+                  Save
                 </button>
                 <button
-                  onClick={() => {
-                    setEditing(false);
-                    //Reset edit states to current user data
-                    setEditName(user.name);
-                    setEditEmail(user.email);
-                    setEditPhone(user.phone_number);
-                    setNewAvatarFile(null);
-                    setPreviewAvatar(null);
-                    //Reset input file ref
-                    if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                    }
-                  }}
-                  className="border px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                  onClick={() => setEditing(false)}
+                  className="border px-4 py-1 rounded hover:bg-gray-100 transition"
                 >
                   Cancel
                 </button>
@@ -506,23 +317,23 @@ export default function UserPage() {
             </div>
           ) : (
             <>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">{user.name}</h1>
-              <p className="text-gray-600 mt-2 dark:text-gray-300 flex items-center gap-2">
-                📧 {user.email}
+              <h1 className="text-4xl font-bold">{user.name}</h1>
+              <p className="text-gray-600 mt-1 dark:text-gray-300">
+                Email: {user.email}
               </p>
-              <p className="text-gray-600 mt-1 dark:text-gray-300 flex items-center gap-2">
-                📞 {user.phone_number}
+              <p className="text-gray-600 mt-1 dark:text-gray-300">
+                Phone number: {user.phone_number}
               </p>
-              <p className="mt-2 text-gray-400 text-sm">
-                Joined on {format(new Date(user.created_at || ""), "dd/MM/yyyy")}
+              <p className="mt-1 text-gray-400 text-sm">
+                Joined {format(new Date(user.created_at || ""), "dd/MM/yyyy")}
               </p>
               {isOwner && (
-                <div className="flex gap-4 mt-4">
+                <>
                   <button
                     onClick={() => setEditing(true)}
-                    className="text-blue-600 hover:text-blue-700 font-medium transition"
+                    className="mt-2 text-blue-600 hover:underline"
                   >
-                    ✏️ Edit Profile
+                    Edit Profile
                   </button>
                   <ConfirmDeleteModal
                     open={openConfirmDelete}
@@ -532,46 +343,45 @@ export default function UserPage() {
 
                   <button
                     onClick={handleDeleteProfile}
-                    className="text-red-600 hover:text-red-700 font-medium transition"
+                    className="mt-2 flex text-red-600 hover:underline"
                   >
-                    🗑️ Delete Profile
+                    Delete Profile
                   </button>
-                </div>
+                </>
               )}
             </>
           )}
         </div>
       </div>
 
-      <hr className="dark:border-gray-700" />
-
       {/* ==================== ROOMS ==================== */}
       {rooms.length > 0 && (
         <div>
-          <h2 className="text-3xl font-bold mb-6">
-            🏠 Rooms listed by {user.name} ({rooms.length})
+          <h2 className="text-2xl font-semibold mb-4">
+            🏠 Rooms listed by {user.name}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {rooms.map((room) => (
               <div
                 key={room.id}
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow hover:shadow-lg cursor-pointer transition-all duration-300"
-                onClick={() => router.push(`/pages/room/${room.id}`)}
+                className="border rounded-lg overflow-hidden shadow hover:shadow-lg cursor-pointer transition transform hover:-translate-y-1"
+                onClick={() => router.push(`/room/${room.id}`)}
               >
-                <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 relative">
+                {room.image_url && (
                   <Image
-                    src={room.image_url || "/placeholder_room.jpg"}
+                    src={room.image_url}
                     alt={room.title}
-                    layout="fill"
-                    objectFit="cover"
+                    width={400}
+                    height={200}
+                    className="w-full h-48 object-cover"
                   />
-                </div>
+                )}
                 <div className="p-4">
-                  <h3 className="font-semibold text-lg line-clamp-1 text-gray-900 dark:text-white">{room.title}</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 flex items-center gap-1">
-                    📍 {room.city}
+                  <h3 className="font-semibold text-lg">{room.title}</h3>
+                  <p className="text-gray-500 dark:text-gray-300">
+                    {room.city}
                   </p>
-                  <p className="mt-2 font-bold text-lg text-blue-600 dark:text-blue-400">
+                  <p className="mt-1 font-bold">
                     ${room.price.toLocaleString()} / night
                   </p>
                 </div>
@@ -581,80 +391,116 @@ export default function UserPage() {
         </div>
       )}
 
-      <hr className="dark:border-gray-700" />
-
       {/* ==================== REVIEWS ==================== */}
       <div>
-        <h2 className="text-3xl font-bold mb-6">
-          ⭐ Reviews written by {user.name} ({reviews.length})
+        <h2 className="text-2xl font-semibold mb-4">
+          ⭐ Reviews by {user.name}
         </h2>
 
-        {/* Filter & sort controls */}
-        <div className="flex flex-wrap gap-4 mb-6 items-center bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700">
-          <label className="font-medium text-sm">Filter:</label>
+        {/* Filter & sort */}
+        <div className="flex flex-wrap gap-3 mb-4 items-center">
           <select
             value={filterRating}
             onChange={(e) => setFilterRating(Number(e.target.value))}
-            className="border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="border rounded px-3 py-1"
           >
             <option value={0}>All ratings</option>
             {[5, 4, 3, 2, 1].map((star) => (
-              <option key={star} value={star}>
+              <option
+                className="text-gray-700 dark:text-gray-300"
+                key={star}
+                value={star}
+              >
                 {star} stars
               </option>
             ))}
           </select>
 
-          <label className="font-medium text-sm ml-4">Sort by:</label>
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
-            className="border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="border rounded px-3 py-1"
           >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="high">Highest rating</option>
-            <option value="low">Lowest rating</option>
+            <option className="text-gray-700 dark:text-gray-300" value="newest">
+              Newest
+            </option>
+            <option className="text-gray-700 dark:text-gray-300" value="oldest">
+              Oldest
+            </option>
+            <option className="text-gray-700 dark:text-gray-300" value="high">
+              Highest rating
+            </option>
+            <option className="text-gray-700 dark:text-gray-300" value="low">
+              Lowest rating
+            </option>
           </select>
-          <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
-            Showing {sortedReviews.length} review(s)
-          </span>
         </div>
 
         {/* Reviews list */}
         {sortedReviews.length > 0 ? (
           <div className="space-y-4">
             {sortedReviews.map((review) => (
-              <div key={review.id} className="border p-4 rounded-lg shadow-sm bg-white dark:bg-gray-800 dark:border-gray-700">
+              <div key={review.id} className="border p-4 rounded-lg shadow-sm">
                 <h3
-                  className="font-semibold text-lg text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  className="font-semibold text-lg text-blue-600 hover:underline cursor-pointer"
                   onClick={() =>
-                    review.rooms && router.push(`/pages/room/${review.rooms.id}`)
+                    review.rooms && router.push(`/room/${review.rooms.id}`)
                   }
                 >
                   {review.rooms?.title || "Unknown room"}
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  {review.rooms?.city} | ${review.rooms?.price?.toLocaleString()} / night
+                <p className="text-gray-500 dark:text-gray-300 text-sm">
+                  {review.rooms?.city} | $
+                  {review.rooms?.price?.toLocaleString()}
                 </p>
-                <p className="text-yellow-500 font-bold text-xl mt-2 mb-2">
-                  {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                <p className="text-yellow-500 font-semibold mt-1">
+                  ⭐ {review.rating}/5
                 </p>
                 <p className="mt-2 text-gray-700 dark:text-gray-300">
                   {review.comment}
                 </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Reviewed on {format(new Date(review.created_at), "dd/MM/yyyy")}
+                <p className="text-sm text-gray-400">
+                  {format(new Date(review.created_at), "dd/MM/yyyy")}
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 dark:text-gray-400">
-            {filterRating ? `No ${filterRating}-star reviews found.` : "No reviews yet."}
-          </p>
+          <p className="text-gray-500">No reviews yet.</p>
         )}
       </div>
     </div>
+  );
+}
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+
+export function ConfirmDeleteModal({ open, onConfirm, onCancel }) {
+  return (
+    <Dialog open={open} onOpenChange={onCancel}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Are you sure?</DialogTitle>
+        </DialogHeader>
+
+        <p>This action cannot be undone.</p>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
