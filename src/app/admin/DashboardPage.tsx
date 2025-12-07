@@ -42,7 +42,7 @@ export default function DashboardPage() {
     setMounted(true);
   }, []);
 
-  // tổng số users, rooms, bookings, reports
+  // Sum of users, rooms, bookings, reports
   useEffect(() => {
     (async () => {
       const [u, r, b, rep] = await Promise.all([
@@ -60,7 +60,7 @@ export default function DashboardPage() {
     })();
   }, []);
 
-  // Lấy số phòng đã đặt và chưa đặt
+  // Get the number of rooms booked and available
   useEffect(() => {
     (async () => {
       const { data: rooms, error } = await supabase
@@ -79,7 +79,7 @@ export default function DashboardPage() {
     })();
   }, []);
 
-  // dữ liệu chart theo tháng
+  // Data for the chart by month
   useEffect(() => {
     (async () => {
       const { data } = await supabase.rpc("monthly_stats");
@@ -87,7 +87,7 @@ export default function DashboardPage() {
     })();
   }, []);
 
-  // Lấy doanh thu theo tháng
+  // Get revenue by month
   useEffect(() => {
     (async () => {
       const { data: bookings, error } = await supabase
@@ -99,7 +99,7 @@ export default function DashboardPage() {
         return;
       }
 
-      // Nhóm doanh thu theo tháng
+      // Group revenue by month
       const revenueByMonth: Record<string, number> = {};
       
       bookings?.forEach((booking) => {
@@ -111,11 +111,11 @@ export default function DashboardPage() {
         }
       });
 
-      // Tìm năm đầu tiên và cuối cùng có dữ liệu
+      // Find the first and last year with data
       const months = Object.keys(revenueByMonth).sort((a, b) => a.localeCompare(b));
       
       if (months.length === 0) {
-        // Nếu không có dữ liệu, hiển thị 12 tháng của năm hiện tại
+        // If there is no data, display 12 months of the current year
         const currentYear = new Date().getFullYear();
         const allMonths: MonthlyRevenue[] = [];
         for (let month = 1; month <= 12; month++) {
@@ -133,10 +133,10 @@ export default function DashboardPage() {
       const [startYear] = firstMonth.split("-").map(Number);
       const [endYear, endMonth] = lastMonth.split("-").map(Number);
       
-      // Tạo array chứa tất cả các tháng từ tháng 1 của năm đầu đến tháng cuối cùng có dữ liệu
+      // Create an array containing all months from the first month of the first year to the last month of the last year with data
       const allMonths: MonthlyRevenue[] = [];
       let currentYear = startYear;
-      let currentMonth = 1; // Bắt đầu từ tháng 1 của năm đầu tiên
+      let currentMonth = 1; // Start from the first month of the first year
       
       while (
         currentYear < endYear || 

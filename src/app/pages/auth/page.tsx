@@ -60,10 +60,14 @@ function AuthContent() {
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center p-6 ${backgroundClasses}`}
-      style={{
-        backgroundImage: getBackgroundUrl(),
-      }}
+      className={`
+        min-h-screen flex items-start justify-center p-6
+        ${mode === "login" ? "pt-60" : ""}
+        ${mode === "register" ? "pt-32" : ""}
+        ${mode === "forgot" ? "pt-72" : ""}
+        ${backgroundClasses}
+      `}
+      style={{ backgroundImage: getBackgroundUrl() }}
     >
       <div
         className={`bg-white shadow-lg rounded-2xl p-8 w-full max-w-md relative overflow-hidden dark:bg-gray-800`}
