@@ -131,7 +131,7 @@ export default function BookingHistory() {
             {/* image container with fixed height */}
             <div className="w-full h-48 relative">
               <Image
-                src={b.rooms?.room_images?.[0]?.img_url || "/room-img-default.png"}
+                src={b.rooms?.room_images?.[0]?.img_url || "/no-image.jpg"}
                 alt={b.rooms?.title || "Room"}
                 width={800}
                 height={400}
@@ -173,13 +173,13 @@ export default function BookingHistory() {
                 </span>
               </p>
 
-              {b.status === "confirmed" && (
+              {b.status === "approved" && (
                 <Button
                   onClick={(e) => {
                     e.stopPropagation(); // prevent card click when clicking the button
                     handleShowLandlord(b.rooms.landlord_id as string);
                   }}
-                  className="mt-3 cursor-pointer hover:bg-gray-500"
+                  className="mt-3"
                 >
                   View Landlord Info
                 </Button>

@@ -48,7 +48,7 @@ export default function ConfirmationBooking() {
       {roomImageUrl && (
         <div className="mb-6 w-full h-64 relative">
           <Image
-            src={roomImageUrl || "/room-img-default.png"}
+            src={roomImageUrl}
             alt={room.name || "Room image"}
             fill
             className="object-cover rounded-lg"

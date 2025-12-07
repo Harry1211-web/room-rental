@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
@@ -69,7 +69,7 @@ export default function RoomDetailPage() {
   >(null);
 
   const [submittingReview, setSubmittingReview] = useState(false);
-  useEffect(() => {setLoading(false)},[])
+  useEffect(() => {setLoading(false)})
   // ==================== FETCH ROOM DATA ====================
   useEffect(() => {
     if (!id) return;
@@ -153,12 +153,11 @@ export default function RoomDetailPage() {
   }, [id]);
 
   // ==================== FILTER & SORT ====================
-  const filteredReviews = useMemo(() =>
-    reviews.filter((r) => filterRating ? r.rating === filterRating : true),
-    [reviews, filterRating]
+  const filteredReviews = reviews.filter((r) =>
+    filterRating ? r.rating === filterRating : true
   );
 
-  const sortedReviews = useMemo(() => [...filteredReviews].sort((a, b) => {
+  const sortedReviews = [...filteredReviews].sort((a, b) => {
     switch (sortOrder) {
       case "newest":
         return (
@@ -175,7 +174,7 @@ export default function RoomDetailPage() {
       default:
         return 0;
     }
-  }), [filteredReviews, sortOrder]);
+  });
 
   const totalPages = Math.ceil(sortedReviews.length / reviewsPerPage);
   const startIdx = (page - 1) * reviewsPerPage;
@@ -276,7 +275,7 @@ export default function RoomDetailPage() {
               className="relative w-full h-60 rounded-lg overflow-hidden"
             >
               <Image
-                src={url || "/room-img-default.png"}
+                src={url}
                 alt="Room image"
                 fill
                 className="object-cover"
@@ -288,7 +287,7 @@ export default function RoomDetailPage() {
       </div>
 
       {/* Room info */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-lg">
+      <div className="text-lg space-y-2">
         <p>
           <span className="font-semibold">📍 Address:</span> {room.address}
         </p>
@@ -303,7 +302,7 @@ export default function RoomDetailPage() {
           <span className="font-semibold">💰 Price:</span>{" "}
           ${room.price.toLocaleString()} / night
         </p>
-        <p className="sm:col-span-2 text-gray-700 dark:text-gray-300">{room.description || "No description."}</p>
+        <p className="text-gray-700 dark:text-gray-300">{room.description || "No description."}</p>
       </div>
 
       {/* Booking & Report buttons */}
@@ -312,7 +311,7 @@ export default function RoomDetailPage() {
           className={`absolute top-[-25px] left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md ${
             idUser ? "hidden" : "block"
           }`}
-          /*style={{ display: idUser ? "none" : "block" }}*/
+          style={{ display: idUser ? "none" : "block" }}
         >
           Please login to book or report
         </div>
@@ -376,50 +375,48 @@ export default function RoomDetailPage() {
 
         {/* Review list */}
         {paginatedReviews.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{
-            paginatedReviews.map((review) => {
-              const reviewerName = review.users?.name || "Anonymous user";
-              const reviewerAvatar =
-                review.users?.avatar_url?.trim() ||
-                "https://bfohmdgcgylgbdmpqops.supabase.co/storage/v1/object/public/avatars/avatar_default.jpg";
+          paginatedReviews.map((review) => {
+            const reviewerName = review.users?.name || "Anonymous user";
+            const reviewerAvatar =
+              review.users?.avatar_url?.trim() ||
+              "https://bfohmdgcgylgbdmpqops.supabase.co/storage/v1/object/public/avatars/avatar_default.jpg";
 
-              return (
-                <div key={review.id} className="border p-4 rounded-lg relative">
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src={reviewerAvatar}
-                      alt={reviewerName}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
-                    />
-                    <div>
-                      <p className="font-semibold">{reviewerName}</p>
-                      <p className="text-yellow-500">⭐ {review.rating}/5</p>
-                    </div>
+            return (
+              <div key={review.id} className="border p-4 rounded-lg relative">
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={reviewerAvatar}
+                    alt={reviewerName}
+                    width={40}
+                    height={40}
+                    className="rounded-full"
+                  />
+                  <div>
+                    <p className="font-semibold">{reviewerName}</p>
+                    <p className="text-yellow-500">⭐ {review.rating}/5</p>
                   </div>
-                  <p className="mt-2 text-gray-700 dark:text-gray-300">{review.comment}</p>
-                  <p className="text-sm text-gray-400">
-                    {format(new Date(review.created_at), "dd/MM/yyyy")}
-                  </p>
-
-                  <button
-                    disabled={!idUser}
-                    onClick={() =>
-                      setReportData({
-                        type: "user",
-                        idTargetedUser: review.reviewer_id,
-                        targetedName: reviewerName,
-                      })
-                    }
-                    className="absolute top-3 right-3 text-red-500 hover:text-red-700 text-sm"
-                  >
-                    🚩 Report
-                  </button>
                 </div>
-              );
-            })}
-          </div>
+                <p className="mt-2 text-gray-700 dark:text-gray-300">{review.comment}</p>
+                <p className="text-sm text-gray-400">
+                  {format(new Date(review.created_at), "dd/MM/yyyy")}
+                </p>
+
+                <button
+                  disabled={!idUser}
+                  onClick={() =>
+                    setReportData({
+                      type: "user",
+                      idTargetedUser: review.reviewer_id,
+                      targetedName: reviewerName,
+                    })
+                  }
+                  className="absolute top-3 right-3 text-red-500 hover:text-red-700 text-sm"
+                >
+                  🚩 Report
+                </button>
+              </div>
+            );
+          })
         ) : (
           <p className="text-gray-500">No matching reviews found.</p>
         )}
@@ -434,11 +431,11 @@ export default function RoomDetailPage() {
             ← Previous
           </Button>
           <span>
-            Page {page} / {Math.max(totalPages, 1)}
+            Page {page} / {totalPages}
           </span>
           <Button
             variant="outline"
-            disabled={page >= Math.max(totalPages, 1)}
+            disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
             Next →

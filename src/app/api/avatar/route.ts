@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { supabase } from "@/lib/supabaseClient";
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,43 +9,80 @@ export async function POST(req: NextRequest) {
     const userId = formData.get("userId");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Invalid or missing file." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid or missing file." },
+        { status: 400 }
+      );
     }
+
     if (typeof userId !== "string") {
-      return NextResponse.json({ error: "Missing userId." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing or invalid userId." },
+        { status: 400 }
+      );
     }
 
-    //Always upload to a fixed key = avatar.webp
-    const filePath = `${userId}/avatar.webp`;
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${userId}/avatar.${fileExt}`;
 
-    //Convert to ArrayBuffer (FAST, reliable)
-    const buffer = await file.arrayBuffer();
-
-    //Upload once — supabaseAdmin only (no need for public client)
     const { error: uploadError } = await supabaseAdmin.storage
       .from("avatars")
-      .upload(filePath, buffer, {
-        upsert: true,
-        contentType: "image/webp",
-        cacheControl: "0",
-      });
+      .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+      return NextResponse.json(
+        { error: uploadError.message || "Cannot upload avatar." },
+        { status: 500 }
+      );
     }
 
-    //Generate public URL *with cache-busting*
-    const { data } = supabaseAdmin.storage.from("avatars").getPublicUrl(filePath);
-
-    const cacheBustedURL = `${data.publicUrl}?t=${Date.now()}`;
+    const { data: publicUrlData } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
 
     return NextResponse.json({
       success: true,
-      avatarUrl: cacheBustedURL,
+      avatarUrl: publicUrlData.publicUrl,
     });
-  } catch (error: any) {
-    console.error("Upload error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.error("Upload avatar error:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const formData = await req.formData();
+    const userId = formData.get("userId");
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    // Tự động assume ảnh tên avatar.(jpg/png/webp)
+    // Nếu muốn strict thì lưu loại file vào DB, còn đây thì lấy mọi file trong folder và pick ảnh đầu.
+    const { data: files } = await supabaseAdmin.storage
+      .from("avatars")
+      .list(userId + "/", { limit: 1 });
+
+    if (!files || files.length === 0) {
+      return NextResponse.json({ avatarUrl: null }); // user chưa có avatar
+    }
+
+    const path = `${userId}/${files[0].name}`;
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+
+    return NextResponse.json({ avatarUrl: data.publicUrl });
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.error("Get avatar error:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -52,19 +90,27 @@ export async function DELETE(req: NextRequest) {
   try {
     const formData = await req.formData();
     const userId = formData.get("userId");
-
-    if (!userId) {
+    if (!userId)
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+
+    const { data: files } = await supabaseAdmin.storage
+      .from("avatars")
+      .list(userId + "/");
+
+    if (!files || files.length === 0) {
+      return NextResponse.json({ success: true }); // Không có gì để xóa
     }
 
-    const filePath = `${userId}/avatar.webp`;
-
-    //Delete exact known path
-    await supabaseAdmin.storage.from("avatars").remove([filePath]);
+    const paths = files.map((f) => `${userId}/${f.name}`);
+    await supabaseAdmin.storage.from("avatars").remove(paths);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Delete error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.error("Delete avatar error:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
   }
 }
