@@ -64,7 +64,9 @@ export default function DashboardPage() {
   // Lấy số phòng đã đặt và chưa đặt
   useEffect(() => {
     (async () => {
-      const { data: rooms, error } = await supabase.from("rooms").select("status");
+      const { data: rooms, error } = await supabase
+        .from("rooms")
+        .select("status");
 
       if (error) {
         console.error("Error fetching room status:", error);
@@ -211,6 +213,13 @@ export default function DashboardPage() {
                       borderRadius: "8px",
                       color: mounted && theme === "dark" ? "#ffffff" : "#000000",
                     }}
+                    labelStyle={{
+                      color: mounted && theme === "dark" ? "#ffffff" : "#000000",
+                    }}
+                    itemStyle={{
+                      color: mounted && theme === "dark" ? "#ffffff" : "#000000",
+                    }}
+                    formatter={(value: number) => [value, "Rooms"]}
                   />
                 </PieChart>
               </ResponsiveContainer>

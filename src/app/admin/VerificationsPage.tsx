@@ -241,7 +241,12 @@ async function handleDelete(v: Verification) {
                     </div>
                   }
                 >
-                  <span className="truncate block max-w-[150px]">{r.room?.name}</span>
+                 <button
+                    className="text-blue-600 dark:text-blue-400 hover:underline truncate block max-w-[200px]"
+                    onClick={() => r.room_id && router.push(`pages/room/${r.room_id}`)}
+                  >
+                    {r.room.name} 
+                  </button>
                 </HoverCard>
               ) : "—",
           },
