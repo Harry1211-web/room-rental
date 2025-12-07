@@ -84,7 +84,7 @@ export function DataTable<T extends object>({
                     key={col.key ? String(col.key) : `col-${colIdx}`} 
                     className={`px-4 py-2 border-b dark:border-gray-700 text-gray-900 dark:text-gray-100 text-left align-top ${col.width || getColumnWidth(colIdx, totalCols)}`}
                   >
-                    <div className="word-wrap break-word text-left">
+                    <div className="break-word text-left">
                       {col.render ? col.render(row) : col.key ? String(row[col.key]) : "—"}
                     </div>
                   </td>
