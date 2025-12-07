@@ -146,9 +146,9 @@ export default function ReportsPage() {
     return (
       <HoverCard content={
         <div className="text-gray-900 dark:text-gray-100 max-w-xs sm:max-w-sm">
-          <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {name ?? "N/A"}</p>
-          {data.email && <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {data.email}</p>}
-          <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {id}</p>
+          <p><strong>Name:</strong> {data?.name ?? "N/A"}</p>
+          <p><strong>Email:</strong> {data?.email ?? "N/A"}</p>
+          <p><strong>ID:</strong> {id}</p>
         </div>
       }>
         <button
