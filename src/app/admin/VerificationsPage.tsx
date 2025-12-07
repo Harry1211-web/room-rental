@@ -114,22 +114,52 @@ export default function VerificationsPage() {
     }
   }
 
-  async function handleDelete(v: Verification) {
-    if (!confirm(`Delete verification ${v.id} of ${v.landlord_id}?`)) return;
-    const { error } = await supabase.from("verifications").delete().eq("id", v.id);
-    if (error) toast.error("Cannot be deleted!");
-    else {
-      toast.success("Deleted!");
-      fetchVerifications();
+async function handleDelete(v: Verification) {
+  if (!confirm(`Are you sure you want to delete verification ${v.id} of ${v.landlord_id}? This will also delete the proof image.`)) return;
+
+  try {
+    // Lấy ID phòng và ID xác minh
+    const idRoom = v.room_id;
+    const verification_id = v.id;
+
+    // 1. Xóa record trong bảng 'verifications'
+    const { error: dbError } = await supabase.from("verifications").delete().eq("id", verification_id);
+    if (dbError) throw dbError;
+
+    // 2. Xóa tệp bằng chứng liên quan bằng cách gọi API route /api/verification_proof
+    if (idRoom && verification_id) {
+        const formData = new FormData();
+        formData.append("action", "delete-one");
+        formData.append("idRoom", idRoom); 
+        formData.append("verification_id", verification_id);
+        
+        const res = await fetch("/api/verification_proof", {
+            method: "DELETE",
+            body: formData,
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            console.warn("Verification deleted, but failed to delete proof image:", errorData.error);
+            toast.warning("Verification deleted, but proof image cleanup failed.");
+        }
     }
+
+    toast.success("Verification and associated proof deleted successfully!");
+    fetchVerifications();
+  } catch (error) {
+    console.error("Error deleting verification:", error);
+    toast.error(`Cannot be deleted! ${error instanceof Error ? error.message : "An unknown error occurred."}`);
   }
+}
+
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">✅ Verifications</h1>
 
       {/* 🔍 Search & Filter */}
-      <div className="flex flex-wrap gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
         <input
           type="text"
           placeholder="Search landlord name, email, or ID"
@@ -137,12 +167,13 @@ export default function VerificationsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="border dark:border-gray-700 px-3 py-2 rounded shadow-sm w-full sm:w-96 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         />
+        
         <select
           value={filterStatus}
           onChange={(e) =>
             setFilterStatus(e.target.value as (typeof statusOptions)[number])
           }
-          className="border dark:border-gray-700 px-3 py-2 rounded shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          className="border dark:border-gray-700 px-3 py-2 rounded shadow-sm w-full sm:w-52 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         >
           {statusOptions.map((opt) => (
             <option key={opt} value={opt}>
@@ -164,11 +195,11 @@ export default function VerificationsPage() {
             label: "ID",
             render: (r) => r.landlord_id ? (
               <HoverCard content={
-                <div className="text-gray-900 dark:text-gray-100">
-                  <p><strong className="text-gray-900 dark:text-gray-100">Full ID:</strong> {r.landlord_id}</p>
+                <div className="text-gray-900 dark:text-gray-100 text-sm">
+                  <p><strong>Full ID:</strong> {r.landlord_id}</p>
                 </div>
               }>
-                <span className="cursor-help" title={r.landlord_id}>
+                <span className="cursor-help block truncate max-w-[150px]" title={r.landlord_id}>
                   {r.landlord_id.substring(0, 12)}...
                 </span>
               </HoverCard>
@@ -182,14 +213,14 @@ export default function VerificationsPage() {
                 <HoverCard
                   content={
                     <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-                      <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.users?.name ?? "N/A"}</p>
-                      <p><strong className="text-gray-900 dark:text-gray-100">Email:</strong> {r.users?.email ?? "N/A"}</p>
-                      <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.landlord_id}</p>
+                      <p><strong>Name:</strong> {r.users?.name ?? "N/A"}</p>
+                      <p><strong>Email:</strong> {r.users?.email ?? "N/A"}</p>
+                      <p><strong>ID:</strong> {r.landlord_id}</p>
                     </div>
                   }
                 >
                   <button
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    className="text-blue-600 dark:text-blue-400 hover:underline truncate block max-w-[200px]"
                     onClick={() => router.push(`pages/user/${r.landlord_id}`)}
                   >
                     {r.users?.name ?? r.users?.email ?? "No name"}
@@ -205,32 +236,27 @@ export default function VerificationsPage() {
                 <HoverCard
                   content={
                     <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-                      <p><strong className="text-gray-900 dark:text-gray-100">Name:</strong> {r.room?.name ?? "N/A"}</p>
-                      <p><strong className="text-gray-900 dark:text-gray-100">ID:</strong> {r.room_id}</p>
+                      <p><strong>Name:</strong> {r.room?.name ?? "N/A"}</p>
+                      <p><strong>ID:</strong> {r.room_id}</p>
                     </div>
                   }
                 >
-                  <button
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                    onClick={() => router.push(`pages/user/${r.landlord_id}`)}
-                  >
-                    {r.users?.name ?? r.users?.email ?? "No name"}
-                  </button>
+                  <span className="truncate block max-w-[150px]">{r.room?.name}</span>
                 </HoverCard>
               ) : "—",
           },
-          { key: "type", label: "Type of verification" },
+          { key: "type", label: "Type of verification", render: (r) => <span className="truncate block max-w-[150px]">{r.type ?? "—"}</span> },
           {
             key: "proof",
-            label: "Proof picture",
+            label: "Proof",
             render: (r) =>
               r.proof ? (
-                <button onClick={() => setPreviewImage(r.proof ?? null)}>
+                <button className="block" onClick={() => setPreviewImage(r.proof ?? null)}>
                   <Image
                     src={r.proof}
                     alt="Proof"
-                    width={96}
-                    height={96}
+                    width={64}
+                    height={64}
                     className="object-cover rounded cursor-pointer shadow-sm hover:opacity-90 transition"
                   />
                 </button>
@@ -239,8 +265,7 @@ export default function VerificationsPage() {
           {
             key: "created_at",
             label: "Date sent",
-            width: "w-[100px]",
-            render: (r) => new Date(r.created_at).toLocaleDateString(),
+            render: (r) => <span className="truncate block max-w-[100px]">{new Date(r.created_at).toLocaleDateString()}</span>,
           },
           {
             key: "verified",
@@ -248,7 +273,7 @@ export default function VerificationsPage() {
             render: (r) => (
               <button
                 onClick={() => updateStatus(r.id, r.verified)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-1 transition-all duration-200 shadow-sm ${
+                className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 transition-all duration-200 shadow-sm whitespace-nowrap ${
                   r.verified
                     ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800"
                     : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800"

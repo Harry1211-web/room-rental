@@ -22,36 +22,36 @@ export default function RecommendPage() {
   const [hotThisMonth, setHotThisMonth] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showRooms, setShowRooms] = useState(false);
-  const { setLoading } = useUser();
+  const { setLoading, role, loading  } = useUser();
 
   // Fetch recommended rooms on mount
   useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Remove the generic type from rpc calls
-        const [booked, rated, hot] = await Promise.all([
-          supabase.rpc("rpc_top_booked_rooms"),
-          supabase.rpc("rpc_top_rated_rooms"),
-          supabase.rpc("rpc_hot_rooms_this_month")
-        ]);
+    if (!loading && role !== "admin") {
+      const fetchRooms = async () => {
+        try {
+          setIsLoading(true);
 
-        // Update states with proper typing
-        setTopBooked((booked.data as Room[]) ?? []);
-        setTopRated((rated.data as Room[]) ?? []);
-        setHotThisMonth((hot.data as Room[]) ?? []);
-        setShowRooms(true);
-      } catch (err) {
-        console.error("Error fetching rooms:", err);
-      } finally {
-        setIsLoading(false);
-        setLoading(false);
-      }
-    };
+          const [booked, rated, hot] = await Promise.all([
+            supabase.rpc("rpc_top_booked_rooms"),
+            supabase.rpc("rpc_top_rated_rooms"),
+            supabase.rpc("rpc_hot_rooms_this_month")
+          ]);
 
-    fetchRooms();
-  }, [setLoading]);
+          setTopBooked((booked.data as Room[]) ?? []);
+          setTopRated((rated.data as Room[]) ?? []);
+          setHotThisMonth((hot.data as Room[]) ?? []);
+          setShowRooms(true);
+        } catch (err) {
+          console.error("Error fetching rooms:", err);
+        } finally {
+          setIsLoading(false);
+          setLoading(false);
+        }
+      };
+
+      fetchRooms();
+    }
+  }, [loading, role, setLoading]);
 
   // Show loader until both data and image are loaded
   const shouldShowLoader = isLoading;
