@@ -162,15 +162,3 @@ link[rel="icon"] {
     }
   }
 }
-
-input[type="password"]::-ms-reveal,
-input[type="password"]::-ms-clear {
-  display: none;
-}
-
-input[type="password"] {
-  /* Hides any default visual appearance features */
-  -webkit-appearance: none;
-  appearance: none;
-}
-
