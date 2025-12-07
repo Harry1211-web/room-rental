@@ -46,6 +46,10 @@ export default function UsersPage() {
 
   useEffect(() => {
     let list = [...users];
+
+    //Loại bỏ admin khỏi danh sách hiển thị
+    list = list.filter(u => u.role !== "admin");
+
     if (search.trim()) {
       const lower = search.toLowerCase();
       list = list.filter(
@@ -63,6 +67,12 @@ export default function UsersPage() {
   }, [search, roleFilter, statusFilter, users]);
 
   async function handleSave(updated: User) {
+    // Ngăn không cho đặt vai trò thành admin
+    if (updated.role === "admin") {
+      toast.error("Cannot set role to admin");
+      return;
+    }
+    
     try {
       const { error } = await supabase.from("users").update(updated).eq("id", updated.id);
       if (error) throw error;
@@ -73,6 +83,11 @@ export default function UsersPage() {
       toast.error("Cannot save!");
     }
   }
+
+  const handleEdit = (user: User) => {
+    if (user.role === "admin") return toast.error("Cannot edit admin user");
+    setEditingUser(user);
+  };
 
   async function handleDelete(u: User) {
     if (!confirm(`Are you sure you want to delete user: ${u.name ?? u.email}? This action is irreversible.`)) return;
@@ -121,7 +136,6 @@ export default function UsersPage() {
           onChange={(e) => setRoleFilter(e.target.value as RoleType | "all")}
         >
           <option value="all">All role</option>
-          <option value="admin">Admin</option>
           <option value="tenant">Tenant</option>
           <option value="landlord">Landlord</option>
         </select>
@@ -206,7 +220,7 @@ export default function UsersPage() {
               render: (row) => (
                 <div className="flex gap-2 flex-wrap">
                   <button
-                    onClick={() => setEditingUser(row)}
+                    onClick={() => handleEdit(row)}
                     className="bg-blue-600 text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-all duration-150 font-semibold"
                   >
                     Update
@@ -234,11 +248,11 @@ export default function UsersPage() {
           onClose={() => setEditingUser(null)}
           onSave={handleSave}
           fields={[
-            { key: "id", label: "id" },
+            { key: "id", label: "id", readOnly: true },
             { key: "name", label: "name" },
             { key: "email", label: "Email", type: "email" },
             { key: "phone_number", label: "Phone" },
-            { key: "role", label: "role", type: "select", options: ["admin", "tenant", "landlord"] },
+            { key: "role", label: "role", type: "select", options: ["tenant", "landlord"] },
             { key: "status", label: "status", type: "select", options: ["normal", "warning", "locked"] },
           ]}
         />
