@@ -4,12 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useUser } from "@/app/context/Usercontext";
-import { Moon, Sun, Menu, X } from "lucide-react";
+import { Moon, Sun, Menu, X, MessageSquare } from "lucide-react"; // Import MessageSquare icon
 import { useTheme } from "next-themes";
 import { Button } from "./button";
 
 import { NavbarBasicSearch } from "./NavbarBasicSearch";
 import { NavbarAdvancedSearchContainer } from "./NavbarAdvancedSearchContainer";
+// Assuming ReportModal is located here
+import ReportModal from "@/components/ReportModal"; 
 
 export default function Navbar() {
   const router = useRouter();
@@ -19,6 +21,12 @@ export default function Navbar() {
   const [dropdownMenuOpen, setDropdownMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // New state for ReportModal / Suggestion
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  // Default reportData structure, used to pass context to the modal
+  const [reportData, setReportData] = useState<{ idRoom?: string; idTargetedUser?: string; roomTitle?: string; targetedName?: string; isSuggestion: boolean }>({ isSuggestion: false });
+
   const { theme, setTheme } = useTheme();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -31,6 +39,14 @@ export default function Navbar() {
 
   const toggleDropdown = () => setDropdownMenuOpen((prev) => !prev);
   const toggleMobileMenu = () => setMobileMenuOpen((prev) => !prev);
+  
+  // Function to handle opening the modal specifically for suggestions
+  const handleOpenSuggestionModal = () => {
+    setReportData({ isSuggestion: true }); // Set the flag to indicate a suggestion
+    setIsReportModalOpen(true);
+    setDropdownMenuOpen(false); // Close dropdown
+    setMobileMenuOpen(false); // Close mobile menu
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -53,165 +69,198 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white dark:bg-gray-900 shadow-md dark:shadow-gray-800 px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between z-50 transition-colors duration-300">
-      {/* Logo */}
-      <div
-        className="flex items-center gap-2 cursor-pointer"
-        onClick={() => {
-          router.push("/");
-          setLoading(true);
-        }}
-      >
-        <Image
-          src="/logo.png"
-          alt="Logo"
-          width={40}
-          height={40}
-          className="dark:invert"
-          style={{ width: "auto", height: "auto" }}
-        />
-        <span className="font-bold text-xl text-gray-800 dark:text-gray-100 truncate max-w-[120px] sm:max-w-[200px]">
-          Room Rental
-        </span>
-      </div>
-
-      {/* Desktop search bar */}
-      {role !== "admin" && !isAuthPage && (
-        <div className="hidden md:flex flex-1 justify-center px-4">
-          {showBasicSearch && <NavbarBasicSearch />}
-          {isAdvancedSearchPage && (
-            <NavbarAdvancedSearchContainer isAdvancedSearchPage={isAdvancedSearchPage} />
-          )}
+    <>
+      <nav className="fixed top-0 left-0 w-full bg-white dark:bg-gray-900 shadow-md dark:shadow-gray-800 px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between z-50 transition-colors duration-300">
+        {/* Logo */}
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => {
+            router.push("/");
+            setLoading(true);
+          }}
+        >
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={40}
+            height={40}
+            className="dark:invert"
+            style={{ width: "auto", height: "auto" }}
+          />
+          <span className="font-bold text-xl text-gray-800 dark:text-gray-100 truncate max-w-[120px] sm:max-w-[200px]">
+            Room Rental
+          </span>
         </div>
-      )}
 
-      {/* Right section */}
-      <div className="flex items-center gap-2 md:gap-3">
-        {/* Theme toggle */}
-        {mounted && (
-          <button
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
-            aria-label="Toggle theme"
-          >
-            {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-yellow-400" />}
-          </button>
+        {/* Desktop search bar */}
+        {role !== "admin" && !isAuthPage && (
+          <div className="hidden md:flex flex-1 justify-center px-4">
+            {showBasicSearch && <NavbarBasicSearch />}
+            {isAdvancedSearchPage && (
+              <NavbarAdvancedSearchContainer isAdvancedSearchPage={isAdvancedSearchPage} />
+            )}
+          </div>
         )}
 
-        {/* Desktop auth/profile */}
-        <div className="hidden md:flex items-center gap-2 relative">
-          {isAuthPage ? (
-            <Button onClick={() => router.push("/")}>🏠 Home</Button>
-          ) : !loading && !isLoggedIn ? (
-            <>
-              <Button onClick={() => router.push("/pages/auth?mode=login")}>Login</Button>
-              <Button onClick={() => router.push("/pages/auth?mode=register")}>Sign Up</Button>
-            </>
-          ) : (
-            <div className="relative" ref={menuRef}>
-              <button
-                className="flex items-center space-x-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 transition-colors duration-300"
-                onClick={toggleDropdown}
-              >
-                <Image
-                  src={avatarUrl || "/avatar_default.jpg"}
-                  alt="Avatar"
-                  width={40}
-                  height={40}
-                  className="rounded-full ring-1 ring-gray-300 dark:ring-gray-600 transition-all duration-300"
-                  onError={(e) => {
-                    e.currentTarget.src = "/avatar_default.jpg";
-                  }}
-                />
-                <span className="font-medium text-gray-800 dark:text-gray-100 transition-colors duration-300 truncate max-w-[80px]">
-                  {role}
-                </span>
-              </button>
+        {/* Right section */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* Theme toggle */}
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+              aria-label="Toggle theme"
+            >
+              {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-yellow-400" />}
+            </button>
+          )}
 
-              {dropdownMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 max-w-[90vw] bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
-                  <div className="absolute -top-2 right-4 w-3 h-3 bg-white/90 dark:bg-gray-800/90 transform rotate-45 border-t border-l border-gray-200 dark:border-gray-700"></div>
-                  <div className="flex flex-col py-2">
-                    {role === "landlord" && (
+          {/* Desktop auth/profile */}
+          <div className="hidden md:flex items-center gap-2 relative">
+            {isAuthPage ? (
+              <Button onClick={() => router.push("/")}>🏠 Home</Button>
+            ) : !loading && !isLoggedIn ? (
+              <>
+                <Button onClick={() => router.push("/pages/auth?mode=login")}>Login</Button>
+                <Button onClick={() => router.push("/pages/auth?mode=register")}>Sign Up</Button>
+              </>
+            ) : (
+              <div className="relative" ref={menuRef}>
+                <button
+                  className="flex items-center space-x-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 transition-colors duration-300"
+                  onClick={toggleDropdown}
+                >
+                  <Image
+                    src={avatarUrl || "/avatar_default.jpg"}
+                    alt="Avatar"
+                    width={40}
+                    height={40}
+                    className="rounded-full ring-1 ring-gray-300 dark:ring-gray-600 transition-all duration-300"
+                    onError={(e) => {
+                      e.currentTarget.src = "/avatar_default.jpg";
+                    }}
+                  />
+                  <span className="font-medium text-gray-800 dark:text-gray-100 transition-colors duration-300 truncate max-w-[80px]">
+                    {role}
+                  </span>
+                </button>
+
+                {dropdownMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 max-w-[90vw] bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
+                    <div className="absolute -top-2 right-4 w-3 h-3 bg-white/90 dark:bg-gray-800/90 transform rotate-45 border-t border-l border-gray-200 dark:border-gray-700"></div>
+                    <div className="flex flex-col py-2">
+                      
+                      {/* NEW: Suggestion for App Button */}
+                      <button
+                        className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 flex items-center gap-2 font-semibold"
+                        onClick={handleOpenSuggestionModal}
+                      >
+                        <MessageSquare className="w-4 h-4" /> Suggest for App
+                      </button>
+                      <div className="h-px bg-gray-200 dark:bg-gray-700 mx-4 my-1" /> {/* Divider */}
+
+                      {/* Existing Menu Items */}
+                      {role === "landlord" && (
+                        <button
+                          className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+                          onClick={() => handleMenuClick("/pages/rooms")}
+                        >
+                          Manage Rooms
+                        </button>
+                      )}
+                      {role !== "admin" && (
+                        <>
+                          <button
+                            className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+                            onClick={() => handleMenuClick("/pages/history_bookings")}
+                          >
+                            Booking History
+                          </button>
+                          <button
+                            className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+                            onClick={() => handleMenuClick("/pages/reports")}
+                          >
+                            Reports
+                          </button>
+                        </>
+                      )}
                       <button
                         className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
-                        onClick={() => handleMenuClick("/pages/rooms")}
+                        onClick={() => handleMenuClick(`/pages/user/${idUser}`)}
                       >
-                        Manage Rooms
+                        Profile
                       </button>
-                    )}
-                    {role !== "admin" && (
-                      <>
-                        <button
-                          className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
-                          onClick={() => handleMenuClick("/pages/history_bookings")}
-                        >
-                          Booking History
-                        </button>
-                        <button
-                          className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
-                          onClick={() => handleMenuClick("/pages/reports")}
-                        >
-                          Reports
-                        </button>
-                      </>
-                    )}
-                    <button
-                      className="px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
-                      onClick={() => handleMenuClick(`/pages/user/${idUser}`)}
-                    >
-                      Profile & Settings
-                    </button>
-                    <Button
-                      onClick={logout}
-                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 m-2 rounded-md transition-colors duration-300 w-[calc(100%-16px)]"
-                    >
-                      Logout
-                    </Button>
+                      <Button
+                        onClick={logout}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 m-2 rounded-md transition-colors duration-300 w-[calc(100%-16px)]"
+                      >
+                        Logout
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile menu toggle */}
+          <button
+            className="md:hidden p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+            onClick={toggleMobileMenu}
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
 
-        {/* Mobile menu toggle */}
-        <button
-          className="md:hidden p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
-          onClick={toggleMobileMenu}
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </div>
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden w-full bg-white dark:bg-gray-900 shadow-md p-4 flex flex-col gap-2">
+            {role !== "admin" && !isAuthPage && showBasicSearch && <NavbarBasicSearch />}
+            
+            {/* NEW: Suggestion for App Button (Mobile) */}
+            {isLoggedIn && (
+                <Button onClick={handleOpenSuggestionModal} className="w-full flex items-center justify-center gap-2">
+                    <MessageSquare className="w-4 h-4" /> Suggest for App
+                </Button>
+            )}
 
-      {/* Mobile menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden w-full bg-white dark:bg-gray-900 shadow-md p-4 flex flex-col gap-2">
-          {role !== "admin" && !isAuthPage && showBasicSearch && <NavbarBasicSearch />}
-          {isAuthPage ? (
-            <Button onClick={() => handleMenuClick("/")}>🏠 Home</Button>
-          ) : !loading && !isLoggedIn ? (
-            <>
-              <Button onClick={() => handleMenuClick("/pages/auth?mode=login")} className="w-full">Login</Button>
-              <Button onClick={() => handleMenuClick("/pages/auth?mode=register")} className="w-full">Sign Up</Button>
-            </>
-          ) : (
-            <>
-              {role === "landlord" && (
-                <Button onClick={() => handleMenuClick("/pages/rooms")} className="w-full">Manage Rooms</Button>
-              )}
-              {role !== "admin" && (
-                <>
-                  <Button onClick={() => handleMenuClick("/pages/history_bookings")} className="w-full">Booking History</Button>
-                  <Button onClick={() => handleMenuClick("/pages/reports")} className="w-full">Reports</Button>
-                </>
-              )}
-              <Button onClick={() => handleMenuClick(`/pages/user/${idUser}`)} className="w-full">Profile & Settings</Button>
-              <Button onClick={logout} className="w-full bg-red-500 hover:bg-red-600 text-white">Logout</Button>
-            </>
-          )}
-        </div>
-      )}
-    </nav>
+            {isAuthPage ? (
+              <Button onClick={() => handleMenuClick("/")}>🏠 Home</Button>
+            ) : !loading && !isLoggedIn ? (
+              <>
+                <Button onClick={() => handleMenuClick("/pages/auth?mode=login")} className="w-full">Login</Button>
+                <Button onClick={() => handleMenuClick("/pages/auth?mode=register")} className="w-full">Sign Up</Button>
+              </>
+            ) : (
+              <>
+                {/* Existing Mobile Menu Items */}
+                {role === "landlord" && (
+                  <Button onClick={() => handleMenuClick("/pages/rooms")} className="w-full">Manage Rooms</Button>
+                )}
+                {role !== "admin" && (
+                  <>
+                    <Button onClick={() => handleMenuClick("/pages/history_bookings")} className="w-full">Booking History</Button>
+                    <Button onClick={() => handleMenuClick("/pages/reports")} className="w-full">Reports</Button>
+                  </>
+                )}
+                <Button onClick={() => handleMenuClick(`/pages/user/${idUser}`)} className="w-full">Profile & Settings</Button>
+                <Button onClick={logout} className="w-full bg-red-500 hover:bg-red-600 text-white">Logout</Button>
+              </>
+            )}
+          </div>
+        )}
+      </nav>
+
+      {/* Report/Suggestion Modal */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        idRoom={reportData.idRoom}
+        idTargetedUser={reportData.idTargetedUser}
+        roomTitle={reportData.roomTitle}
+        targetedName={reportData.targetedName}
+        isSuggestion={reportData.isSuggestion} // Pass the new prop
+      />
+    </>
   );
 }
