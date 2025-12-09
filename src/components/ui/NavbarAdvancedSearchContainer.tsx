@@ -201,7 +201,7 @@ export function NavbarAdvancedSearchContainer({ isAdvancedSearchPage }: { isAdva
       />
 
       {dropdownFilterOpen && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[72rem] max-w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-6 space-y-4 z-50">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-6xl max-w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-6 space-y-4 z-50">
           {/* Search Input */}
           <div className="flex flex-col mb-4">
             <label className="font-semibold mb-2">Search:</label>

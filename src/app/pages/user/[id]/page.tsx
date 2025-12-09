@@ -182,7 +182,7 @@ export default function UserPage() {
         setEditEmail(userData?.email || "");
         setEditPhone(userData?.phone_number || "");
       } catch (err) {
-        console.error("Error fetching user data:", err);
+        console.error("Error fetching user data:", err instanceof Error ? err.message : err);
       } finally {
         setLoading1(false);
       }

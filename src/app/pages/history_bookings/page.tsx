@@ -156,7 +156,7 @@ export default function BookingHistory() {
 
             <div className="p-4 space-y-2 dark:text-gray-700 flex-1">
               <h2 className="text-xl font-semibold">{b.rooms?.title}</h2>
-              <p className="text-gray-700 italic"><strong>Description:</strong>
+              <p className="text-gray-700"><strong>Description:</strong>
                 {truncateText(b.rooms?.description)} {/* Apply truncateText function */}
               </p>
 
@@ -212,8 +212,8 @@ export default function BookingHistory() {
       {/* Landlord modal */}
       {landlord && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white p-6 rounded-xl shadow-xl w-80 text-center animate-fadeIn">
-            <h3 className="text-xl font-bold mb-3">Landlord Information</h3>
+          <div className="bg-white p-6 rounded-xl shadow-xl w-80 animate-fadeIn">
+            <h3 className="text-xl font-bold mb-3 text-center">Landlord Information</h3>
             <p>
               <strong>Name:</strong> {landlord.name}
             </p>

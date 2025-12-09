@@ -561,9 +561,9 @@ function TagManager({
   const [searchTag, setSearchTag] = useState("");
 
   const filteredTags = tags.filter((t) =>
-    t.value.toLowerCase().includes(searchTag.toLowerCase()) ||
-    t.id.toLowerCase().includes(searchTag.toLowerCase()) ||
-    t.value_type.toLowerCase().includes(searchTag.toLowerCase())
+    (t.value ?? "").toLowerCase().includes(searchTag.toLowerCase()) ||
+    (t.id ?? "").toLowerCase().includes(searchTag.toLowerCase()) ||
+    (t.value_type ?? "").toLowerCase().includes(searchTag.toLowerCase())
   );
 
   return (

@@ -62,7 +62,7 @@ export function NavbarBasicSearch() {
       setSuggestions((data as RoomSearchResult[]) || []);
 
     } catch (err) {
-      console.error("Error fetching search suggestions:", err);
+      console.error("Error fetching search suggestions:", JSON.stringify(err, null, 2));
       setSuggestions([]);
     } finally {
       setIsLoading(false);

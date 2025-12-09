@@ -204,13 +204,13 @@ export default function BookingByHour({ room, bookings }: any) {
             <strong>Checkout:</strong> {format(checkout, "dd/MM/yyyy HH:mm")}
           </p>
           <p className="mt-2 font-semibold text-green-600">
-            Total price: ${totalPrice}
+            Total price: {totalPrice}
           </p>
         </div>
       )}
 
       <p className="mt-4 font-semibold text-green-600">
-        Total price: {totalPrice}₫ ({totalHours} hours)
+        Total price: ${totalPrice} ({totalHours} hours)
       </p>
 
       <Button
