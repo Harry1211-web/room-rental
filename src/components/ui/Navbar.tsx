@@ -11,7 +11,7 @@ import { Button } from "./button";
 import { NavbarBasicSearch } from "./NavbarBasicSearch";
 import { NavbarAdvancedSearchContainer } from "./NavbarAdvancedSearchContainer";
 // Assuming ReportModal is located here
-import ReportModal from "@/components/ReportModal"; 
+import ReportModal from "../ReportModel"; 
 
 export default function Navbar() {
   const router = useRouter();
