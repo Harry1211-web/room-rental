@@ -210,7 +210,7 @@ export default function UsersPage() {
                 </HoverCard>
               ),
             },
-            { key: "email", label: "Email", render: (row) => <span className="min-w-[180px] block truncate">{row.email}</span> },
+            { key: "email", label: "Email", render: (row) => <span className="min-w-[150px] block truncate">{row.email}</span> },
             { key: "phone_number", label: "Phone", render: (row) => <span className="min-w-[120px] block truncate">{row.phone_number}</span> },
             { key: "role", label: "Role", render: (row) => <span className="capitalize">{row.role}</span> },
             { key: "status", label: "Status", render: (row) => <span className="capitalize">{row.status}</span> },
@@ -260,3 +260,4 @@ export default function UsersPage() {
     </div>
   );
 }
+
