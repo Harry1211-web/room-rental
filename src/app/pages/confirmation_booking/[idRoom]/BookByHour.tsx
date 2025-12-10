@@ -210,7 +210,7 @@ export default function BookingByHour({ room, bookings }: any) {
       )}
 
       <p className="mt-4 font-semibold text-green-600">
-        Total price: {totalPrice}₫ ({totalHours} hours)
+        Total price: {totalPrice}$ ({totalHours} hours)
       </p>
 
       <Button
